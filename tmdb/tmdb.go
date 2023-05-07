@@ -3,6 +3,7 @@ package tmdb
 import "github.com/ryanbradynd05/go-tmdb"
 
 const imageBaseURL = "https://image.tmdb.org/t/p/original"
+const blankProfileURL = "https://bingemate.fr/assets/images/blank-profile.png"
 
 type Genre struct {
 	ID   int    `json:"id"`
@@ -33,8 +34,8 @@ type Movie struct {
 	ReleaseDate string   `json:"release_date"`
 	Studios     []Studio `json:"studios"`
 	Title       string   `json:"title"`
-	VoteAverage float32  `json:"vote_average"` // From our DB ?
-	VoteCount   int      `json:"vote_count"`   // From our DB ?
+	VoteAverage float32  `json:"vote_average"`
+	VoteCount   int      `json:"vote_count"`
 }
 
 type TVEpisode struct {
@@ -89,8 +90,8 @@ func (m *mediaClient) GetMovie(id int) (*Movie, error) {
 		ReleaseDate: movie.ReleaseDate,
 		Studios:     *extractStudios(&movie.ProductionCompanies),
 		Title:       movie.Title,
-		VoteAverage: movie.VoteAverage,    // TODO: From our DB ?
-		VoteCount:   int(movie.VoteCount), // TODO: From our DB ?
+		VoteAverage: movie.VoteAverage,
+		VoteCount:   int(movie.VoteCount),
 	}, err
 }
 
@@ -116,7 +117,7 @@ func extractActors(credits *tmdb.MovieCredits) *[]Person {
 			ID:         cast.ID,
 			Character:  cast.Character,
 			Name:       cast.Name,
-			ProfileURL: imageBaseURL + cast.ProfilePath,
+			ProfileURL: profileImgURL(cast.ProfilePath),
 		}
 	}
 	return &actors
@@ -129,7 +130,7 @@ func extractCrew(credits *tmdb.MovieCredits) *[]Person {
 			ID:         cast.ID,
 			Character:  cast.Job,
 			Name:       cast.Name,
-			ProfileURL: imageBaseURL + cast.ProfilePath,
+			ProfileURL: profileImgURL(cast.ProfilePath),
 		}
 	}
 	return &crew
@@ -160,8 +161,15 @@ func extractStudios(studios *[]struct {
 		extractedStudios[i] = Studio{
 			ID:      studio.ID,
 			Name:    studio.Name,
-			LogoURL: imageBaseURL + studio.LogoPath,
+			LogoURL: profileImgURL(studio.LogoPath),
 		}
 	}
 	return &extractedStudios
+}
+
+func profileImgURL(path string) string {
+	if path == "" {
+		return blankProfileURL
+	}
+	return imageBaseURL + path
 }
