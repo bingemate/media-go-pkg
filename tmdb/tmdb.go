@@ -41,6 +41,7 @@ type Movie struct {
 type TVEpisode struct {
 	ID            int    `json:"id"`
 	TVShowID      int    `json:"tv_show_id"`
+	PosterURL     string `json:"poster_url"`
 	EpisodeNumber int    `json:"episode_number"`
 	SeasonNumber  int    `json:"season_number"`
 	Name          string `json:"name"`
@@ -49,21 +50,21 @@ type TVEpisode struct {
 }
 
 type TVShow struct {
-	ID           int      `json:"id"`
-	Actors       []Person `json:"actors"`
-	BackdropURL  string   `json:"backdrop_url"`
-	Crew         []Person `json:"crew"`
-	Genres       []Genre  `json:"genres"`
-	Overview     string   `json:"overview"`
-	PosterURL    string   `json:"poster_url"`
-	ReleaseDate  string   `json:"release_date"`
-	Studios      []Studio `json:"studios"`
-	Status       string   `json:"status"`
-	NextEpisode  *TVEpisode
-	Title        string  `json:"title"`
-	SeasonsCount int     `json:"seasons_count"`
-	VoteAverage  float32 `json:"vote_average"`
-	VoteCount    int     `json:"vote_count"`
+	ID           int        `json:"id"`
+	Actors       []Person   `json:"actors"`
+	BackdropURL  string     `json:"backdrop_url"`
+	Crew         []Person   `json:"crew"`
+	Genres       []Genre    `json:"genres"`
+	Overview     string     `json:"overview"`
+	PosterURL    string     `json:"poster_url"`
+	ReleaseDate  string     `json:"release_date"`
+	Studios      []Studio   `json:"studios"`
+	Status       string     `json:"status"`
+	NextEpisode  *TVEpisode `json:"next_episode"`
+	Title        string     `json:"title"`
+	SeasonsCount int        `json:"seasons_count"`
+	VoteAverage  float32    `json:"vote_average"`
+	VoteCount    int        `json:"vote_count"`
 }
 
 type MediaClient interface {
@@ -145,6 +146,7 @@ func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 			return &TVEpisode{
 				ID:            tvShow.NextEpisodeToAir.ID,
 				TVShowID:      tvShow.ID,
+				PosterURL:     imageBaseURL + tvShow.NextEpisodeToAir.StillPath,
 				EpisodeNumber: tvShow.NextEpisodeToAir.EpisodeNumber,
 				SeasonNumber:  tvShow.NextEpisodeToAir.SeasonNumber,
 				Name:          tvShow.NextEpisodeToAir.Name,
@@ -166,6 +168,7 @@ func (m *mediaClient) GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode,
 	return &TVEpisode{
 		ID:            episode.ID,
 		TVShowID:      tvId,
+		PosterURL:     imageBaseURL + episode.StillPath,
 		EpisodeNumber: episode.EpisodeNumber,
 		SeasonNumber:  episode.SeasonNumber,
 		Name:          episode.Name,
