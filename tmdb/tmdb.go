@@ -39,15 +39,37 @@ type Movie struct {
 }
 
 type TVEpisode struct {
+	ID            int    `json:"id"`
+	TVShowID      int    `json:"tv_show_id"`
+	EpisodeNumber int    `json:"episode_number"`
+	SeasonNumber  int    `json:"season_number"`
+	Name          string `json:"name"`
+	Overview      string `json:"overview"`
+	AirDate       string `json:"air_date"`
 }
 
 type TVShow struct {
+	ID           int      `json:"id"`
+	Actors       []Person `json:"actors"`
+	BackdropURL  string   `json:"backdrop_url"`
+	Crew         []Person `json:"crew"`
+	Genres       []Genre  `json:"genres"`
+	Overview     string   `json:"overview"`
+	PosterURL    string   `json:"poster_url"`
+	ReleaseDate  string   `json:"release_date"`
+	Studios      []Studio `json:"studios"`
+	Status       string   `json:"status"`
+	NextEpisode  *TVEpisode
+	Title        string  `json:"title"`
+	SeasonsCount int     `json:"seasons_count"`
+	VoteAverage  float32 `json:"vote_average"`
+	VoteCount    int     `json:"vote_count"`
 }
 
 type MediaClient interface {
 	GetMovie(id int) (*Movie, error)
 	GetTVShow(id int) (*TVShow, error)
-	GetTVEpisode(id int) (*TVEpisode, error)
+	GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error)
 	GetTVSeasonEpisodes(id int, season int) (*[]TVEpisode, error)
 }
 
@@ -81,9 +103,9 @@ func (m *mediaClient) GetMovie(id int) (*Movie, error) {
 	}
 	return &Movie{
 		ID:          movie.ID,
-		Actors:      *extractActors(credits),
+		Actors:      *extractMovieActors(credits),
 		BackdropURL: imageBaseURL + movie.BackdropPath,
-		Crew:        *extractCrew(credits),
+		Crew:        *extractMovieCrew(credits),
 		Genres:      *extractGenres(&movie.Genres),
 		Overview:    movie.Overview,
 		PosterURL:   imageBaseURL + movie.PosterPath,
@@ -96,21 +118,83 @@ func (m *mediaClient) GetMovie(id int) (*Movie, error) {
 }
 
 func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
-	//TODO implement me
-	panic("implement me")
+	tvShow, err := m.tmdbClient.GetTvInfo(id, m.options)
+	if err != nil {
+		return nil, err
+	}
+	credits, err := m.tmdbClient.GetTvCredits(id, m.options)
+	if err != nil {
+		return nil, err
+	}
+	return &TVShow{
+		ID:          tvShow.ID,
+		Actors:      *extractTVActors(credits),
+		BackdropURL: imageBaseURL + tvShow.BackdropPath,
+		Crew:        *extractTVCrew(credits),
+		Genres:      *extractGenres(&tvShow.Genres),
+		Overview:    tvShow.Overview,
+		PosterURL:   imageBaseURL + tvShow.PosterPath,
+		ReleaseDate: tvShow.FirstAirDate,
+		Studios:     *extractStudios(&tvShow.ProductionCompanies),
+		Status:      tvShow.Status,
+		Title:       tvShow.Name,
+		NextEpisode: func() *TVEpisode {
+			if tvShow.NextEpisodeToAir.ID == 0 {
+				return nil
+			}
+			return &TVEpisode{
+				ID:            tvShow.NextEpisodeToAir.ID,
+				TVShowID:      tvShow.ID,
+				EpisodeNumber: tvShow.NextEpisodeToAir.EpisodeNumber,
+				SeasonNumber:  tvShow.NextEpisodeToAir.SeasonNumber,
+				Name:          tvShow.NextEpisodeToAir.Name,
+				Overview:      tvShow.NextEpisodeToAir.Overview,
+				AirDate:       tvShow.NextEpisodeToAir.AirDate,
+			}
+		}(),
+		SeasonsCount: tvShow.NumberOfSeasons,
+		VoteAverage:  tvShow.VoteAverage,
+		VoteCount:    int(tvShow.VoteCount),
+	}, nil
 }
 
-func (m *mediaClient) GetTVEpisode(id int) (*TVEpisode, error) {
-	//TODO implement me
-	panic("implement me")
+func (m *mediaClient) GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error) {
+	episode, err := m.tmdbClient.GetTvEpisodeInfo(tvId, season, episodeNumber, m.options)
+	if err != nil {
+		return nil, err
+	}
+	return &TVEpisode{
+		ID:            episode.ID,
+		TVShowID:      tvId,
+		EpisodeNumber: episode.EpisodeNumber,
+		SeasonNumber:  episode.SeasonNumber,
+		Name:          episode.Name,
+		Overview:      episode.Overview,
+		AirDate:       episode.AirDate,
+	}, nil
 }
 
-func (m *mediaClient) GetTVSeasonEpisodes(id int, season int) (*[]TVEpisode, error) {
-	//TODO implement me
-	panic("implement me")
+func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) (*[]TVEpisode, error) {
+	episodes, err := m.tmdbClient.GetTvSeasonInfo(tvId, season, m.options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedEpisodes = make([]TVEpisode, len(episodes.Episodes))
+	for i, episode := range episodes.Episodes {
+		extractedEpisodes[i] = TVEpisode{
+			ID:            episode.ID,
+			TVShowID:      tvId,
+			EpisodeNumber: episode.EpisodeNumber,
+			SeasonNumber:  episode.SeasonNumber,
+			Name:          episode.Name,
+			Overview:      episode.Overview,
+			AirDate:       episode.AirDate,
+		}
+	}
+	return &extractedEpisodes, nil
 }
 
-func extractActors(credits *tmdb.MovieCredits) *[]Person {
+func extractMovieActors(credits *tmdb.MovieCredits) *[]Person {
 	var actors = make([]Person, len(credits.Cast))
 	for i, cast := range credits.Cast {
 		actors[i] = Person{
@@ -123,7 +207,33 @@ func extractActors(credits *tmdb.MovieCredits) *[]Person {
 	return &actors
 }
 
-func extractCrew(credits *tmdb.MovieCredits) *[]Person {
+func extractTVActors(credits *tmdb.TvCredits) *[]Person {
+	var actors = make([]Person, len(credits.Cast))
+	for i, cast := range credits.Cast {
+		actors[i] = Person{
+			ID:         cast.ID,
+			Character:  cast.Character,
+			Name:       cast.Name,
+			ProfileURL: profileImgURL(cast.ProfilePath),
+		}
+	}
+	return &actors
+}
+
+func extractMovieCrew(credits *tmdb.MovieCredits) *[]Person {
+	var crew = make([]Person, len(credits.Crew))
+	for i, cast := range credits.Crew {
+		crew[i] = Person{
+			ID:         cast.ID,
+			Character:  cast.Job,
+			Name:       cast.Name,
+			ProfileURL: profileImgURL(cast.ProfilePath),
+		}
+	}
+	return &crew
+}
+
+func extractTVCrew(credits *tmdb.TvCredits) *[]Person {
 	var crew = make([]Person, len(credits.Crew))
 	for i, cast := range credits.Crew {
 		crew[i] = Person{
