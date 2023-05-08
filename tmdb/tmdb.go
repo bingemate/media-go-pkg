@@ -187,6 +187,7 @@ func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) (*[]TVEpisode, e
 		extractedEpisodes[i] = TVEpisode{
 			ID:            episode.ID,
 			TVShowID:      tvId,
+			PosterURL:     imageBaseURL + episode.StillPath, // TODO Add better handling if image empty
 			EpisodeNumber: episode.EpisodeNumber,
 			SeasonNumber:  episode.SeasonNumber,
 			Name:          episode.Name,
