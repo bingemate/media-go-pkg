@@ -79,7 +79,7 @@ type Episode struct {
 	TvShowID    string    `gorm:"type:uuid;not null"`
 	TvShow      TvShow    `gorm:"reference:TvShowID"`
 	MediaFileID string    `gorm:"type:uuid;not null"`
-	MediaFile   MediaFile `gorm:"reference:MediaFileID;constraint:OnDelete:CASCADE;"`
+	MediaFile   MediaFile `gorm:"reference:MediaFileID;constraint:OnDelete:SET NULL;"`
 }
 
 type Movie struct {
@@ -88,7 +88,7 @@ type Movie struct {
 	MediaID     string    `gorm:"type:uuid;not null"`
 	Media       Media     `gorm:"reference:MediaID"`
 	MediaFileID string    `gorm:"type:uuid;not null"`
-	MediaFile   MediaFile `gorm:"reference:MediaFileID;constraint:OnDelete:CASCADE;"`
+	MediaFile   MediaFile `gorm:"reference:MediaFileID;constraint:OnDelete:SET NULL;"`
 }
 
 type Audio struct {
