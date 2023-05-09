@@ -85,22 +85,22 @@ type TVShow struct {
 type MediaClient interface {
 	GetMovie(id int) (*Movie, error)
 	GetTVShow(id int) (*TVShow, error)
-	GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error)
-	GetTVSeasonEpisodes(id int, season int) (*[]TVEpisode, error)
-	GetTrendingMovies() (*[]Movie, error)
-	GetTrendingTVShows() (*[]TVShow, error)
-	GetRecentMovies() (*[]Movie, error)
-	GetRecentTVShows() (*[]TVShow, error)
-	SearchMovies(query string) (*[]Movie, error)
-	SearchTVShows(query string) (*[]TVShow, error)
-	GetMoviesByGenre(genreID int) (*[]Movie, error)
-	GetTVShowsByGenre(genreID int) (*[]TVShow, error)
-	GetMoviesByActor(actorID int) (*[]Movie, error)
-	GetTVShowsByActor(actorID int) (*[]TVShow, error)
-	GetMoviesByDirector(directorID int) (*[]Movie, error)
-	GetTVShowsByDirector(directorID int) (*[]TVShow, error)
-	GetMoviesByStudio(studioID int) (*[]Movie, error)
-	GetTVShowsByStudio(studioID int) (*[]TVShow, error)
+	GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error) // TODO *[]TVEpisode -> []*TVEpisode
+	GetTVSeasonEpisodes(id int, season int) (*[]TVEpisode, error)     // TODO *[]TVEpisode -> []*TVEpisode
+	GetPopularMovies() (*[]Movie, error)                              // TODO *[]Movie -> []*Movie
+	GetPopularTVShows() (*[]TVShow, error)                            // TODO *[]TVShow -> []*TVShow
+	GetRecentMovies() (*[]Movie, error)                               // TODO *[]Movie -> []*Movie
+	GetRecentTVShows() (*[]TVShow, error)                             // TODO *[]TVShow -> []*TVShow
+	SearchMovies(query string) (*[]Movie, error)                      // TODO *[]Movie -> []*Movie
+	SearchTVShows(query string) (*[]TVShow, error)                    // TODO *[]TVShow -> []*TVShow
+	GetMoviesByGenre(genreID int) (*[]Movie, error)                   // TODO *[]Movie -> []*Movie
+	GetTVShowsByGenre(genreID int) (*[]TVShow, error)                 // TODO *[]TVShow -> []*TVShow
+	GetMoviesByActor(actorID int) (*[]Movie, error)                   // TODO *[]Movie -> []*Movie
+	GetTVShowsByActor(actorID int) (*[]TVShow, error)                 // TODO *[]TVShow -> []*TVShow
+	GetMoviesByDirector(directorID int) (*[]Movie, error)             // TODO *[]Movie -> []*Movie
+	GetTVShowsByDirector(directorID int) (*[]TVShow, error)           // TODO *[]TVShow -> []*TVShow
+	GetMoviesByStudio(studioID int) (*[]Movie, error)                 // TODO *[]Movie -> []*Movie
+	GetTVShowsByStudio(studioID int) (*[]TVShow, error)               // TODO *[]TVShow -> []*TVShow
 }
 
 type mediaClient struct {
