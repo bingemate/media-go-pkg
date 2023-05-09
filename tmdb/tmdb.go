@@ -3,7 +3,9 @@ package tmdb
 import "github.com/ryanbradynd05/go-tmdb"
 
 const imageBaseURL = "https://image.tmdb.org/t/p/original"
-const blankProfileURL = "https://bingemate.fr/assets/images/blank-profile.png"
+const emptyProfileURL = "https://bingemate.fr/assets/empty_profile.jpg"
+const emptyBackdropURL = "https://bingemate.fr/assets/empty_background.jpg"
+const emptyPosterURL = "https://bingemate.fr/assets/empty_poster.jpg"
 
 type Genre struct {
 	ID   int    `json:"id"`
@@ -283,7 +285,21 @@ func extractStudios(studios *[]struct {
 
 func profileImgURL(path string) string {
 	if path == "" {
-		return blankProfileURL
+		return emptyProfileURL
+	}
+	return imageBaseURL + path
+}
+
+func backdropImgURL(path string) string {
+	if path == "" {
+		return emptyBackdropURL
+	}
+	return imageBaseURL + path
+}
+
+func posterImgURL(path string) string {
+	if path == "" {
+		return emptyPosterURL
 	}
 	return imageBaseURL + path
 }
