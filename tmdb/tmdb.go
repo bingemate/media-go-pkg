@@ -107,11 +107,11 @@ func (m *mediaClient) GetMovie(id int) (*Movie, error) {
 	return &Movie{
 		ID:          movie.ID,
 		Actors:      *extractMovieActors(credits),
-		BackdropURL: imageBaseURL + movie.BackdropPath, // TODO Add better handling if image empty
+		BackdropURL: backdropImgURL(movie.BackdropPath),
 		Crew:        *extractMovieCrew(credits),
 		Genres:      *extractGenres(&movie.Genres),
 		Overview:    movie.Overview,
-		PosterURL:   imageBaseURL + movie.PosterPath, // TODO Add better handling if image empty
+		PosterURL:   posterImgURL(movie.PosterPath),
 		ReleaseDate: movie.ReleaseDate,
 		Studios:     *extractStudios(&movie.ProductionCompanies),
 		Title:       movie.Title,
@@ -132,11 +132,11 @@ func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 	return &TVShow{
 		ID:          tvShow.ID,
 		Actors:      *extractTVActors(credits),
-		BackdropURL: imageBaseURL + tvShow.BackdropPath, // TODO Add better handling if image empty
+		BackdropURL: backdropImgURL(tvShow.BackdropPath),
 		Crew:        *extractTVCrew(credits),
 		Genres:      *extractGenres(&tvShow.Genres),
 		Overview:    tvShow.Overview,
-		PosterURL:   imageBaseURL + tvShow.PosterPath, // TODO Add better handling if image empty
+		PosterURL:   posterImgURL(tvShow.PosterPath),
 		ReleaseDate: tvShow.FirstAirDate,
 		Studios:     *extractStudios(&tvShow.ProductionCompanies),
 		Status:      tvShow.Status,
@@ -148,7 +148,7 @@ func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 			return &TVEpisode{
 				ID:            tvShow.NextEpisodeToAir.ID,
 				TVShowID:      tvShow.ID,
-				PosterURL:     imageBaseURL + tvShow.NextEpisodeToAir.StillPath, // TODO Add better handling if image empty
+				PosterURL:     posterImgURL(tvShow.NextEpisodeToAir.StillPath),
 				EpisodeNumber: tvShow.NextEpisodeToAir.EpisodeNumber,
 				SeasonNumber:  tvShow.NextEpisodeToAir.SeasonNumber,
 				Name:          tvShow.NextEpisodeToAir.Name,
@@ -170,7 +170,7 @@ func (m *mediaClient) GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode,
 	return &TVEpisode{
 		ID:            episode.ID,
 		TVShowID:      tvId,
-		PosterURL:     imageBaseURL + episode.StillPath, // TODO Add better handling if image empty
+		PosterURL:     posterImgURL(episode.StillPath),
 		EpisodeNumber: episode.EpisodeNumber,
 		SeasonNumber:  episode.SeasonNumber,
 		Name:          episode.Name,
@@ -189,7 +189,7 @@ func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) (*[]TVEpisode, e
 		extractedEpisodes[i] = TVEpisode{
 			ID:            episode.ID,
 			TVShowID:      tvId,
-			PosterURL:     imageBaseURL + episode.StillPath, // TODO Add better handling if image empty
+			PosterURL:     posterImgURL(episode.StillPath),
 			EpisodeNumber: episode.EpisodeNumber,
 			SeasonNumber:  episode.SeasonNumber,
 			Name:          episode.Name,
