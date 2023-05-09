@@ -122,6 +122,7 @@ func NewMediaClient(apiKey string) MediaClient {
 	}
 }
 
+// GetMovie retrieves movie info and credits by ID and returns a Movie object.
 func (m *mediaClient) GetMovie(id int) (*Movie, error) {
 	movie, err := m.tmdbClient.GetMovieInfo(id, m.options)
 	if err != nil {
@@ -144,9 +145,10 @@ func (m *mediaClient) GetMovie(id int) (*Movie, error) {
 		Title:       movie.Title,
 		VoteAverage: movie.VoteAverage,
 		VoteCount:   int(movie.VoteCount),
-	}, err
+	}, nil
 }
 
+// GetTVShow retrieves TV show info and credits by ID and returns a TVShow object.
 func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 	tvShow, err := m.tmdbClient.GetTvInfo(id, m.options)
 	if err != nil {
@@ -189,6 +191,7 @@ func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 	}, nil
 }
 
+// GetTVEpisode retrieves the information of a TV episode by TV show ID, season number and episode number and returns a TVEpisode object.
 func (m *mediaClient) GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error) {
 	episode, err := m.tmdbClient.GetTvEpisodeInfo(tvId, season, episodeNumber, m.options)
 	if err != nil {
@@ -206,6 +209,7 @@ func (m *mediaClient) GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode,
 	}, nil
 }
 
+// GetTVSeasonEpisodes retrieves all episodes from a TV show season and returns a slice of TVEpisode objects.
 func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) (*[]TVEpisode, error) {
 	episodes, err := m.tmdbClient.GetTvSeasonInfo(tvId, season, m.options)
 	if err != nil {
