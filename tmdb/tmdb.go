@@ -165,33 +165,37 @@ func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) (*[]TVEpisode, e
 	}
 	var extractedEpisodes = make([]TVEpisode, len(episodes.Episodes))
 	for i, episode := range episodes.Episodes {
-		extractedEpisodes[i] = TVEpisode{
-			ID:            episode.ID,
-			TVShowID:      tvId,
-			PosterURL:     posterImgURL(episode.StillPath),
-			EpisodeNumber: episode.EpisodeNumber,
-			SeasonNumber:  episode.SeasonNumber,
-			Name:          episode.Name,
-			Overview:      episode.Overview,
-			AirDate:       episode.AirDate,
-		}
+		extractedEpisodes[i] = *extractTVEpisode(tvId, &episode)
 	}
 	return &extractedEpisodes, nil
 }
 
-func (m *mediaClient) GetTrendingMovies() (*[]Movie, error) {
-	//TODO implement me
-	panic("implement me")
+func (m *mediaClient) GetPopularMovies() (*[]Movie, error) {
+	movies, err := m.tmdbClient.GetMoviePopular(m.options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedMovies = make([]Movie, len(movies.Results))
+	for i, movie := range movies.Results {
+		extractedMovies[i] = *extractMovieShort(&movie)
+	}
+	return &extractedMovies, nil
 }
 
-func (m *mediaClient) GetTrendingTVShows() (*[]TVShow, error) {
-	//TODO implement me
-	panic("implement me")
+func (m *mediaClient) GetPopularTVShows() (*[]TVShow, error) {
+	tvShows, err := m.tmdbClient.GetTvPopular(m.options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	for i, tvShow := range tvShows.Results {
+		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+	}
+	return &extractedTVShows, nil
 }
 
 func (m *mediaClient) GetRecentMovies() (*[]Movie, error) {
-	//TODO implement me
-	panic("implement me")
+	movies, err := m.tmdbClient.GetMovieReleases()
 }
 
 func (m *mediaClient) GetRecentTVShows() (*[]TVShow, error) {
