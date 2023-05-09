@@ -132,20 +132,7 @@ func (m *mediaClient) GetMovie(id int) (*Movie, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Movie{
-		ID:          movie.ID,
-		Actors:      *extractMovieActors(credits),
-		BackdropURL: backdropImgURL(movie.BackdropPath),
-		Crew:        *extractMovieCrew(credits),
-		Genres:      *extractGenres(&movie.Genres),
-		Overview:    movie.Overview,
-		PosterURL:   posterImgURL(movie.PosterPath),
-		ReleaseDate: movie.ReleaseDate,
-		Studios:     *extractStudios(&movie.ProductionCompanies),
-		Title:       movie.Title,
-		VoteAverage: movie.VoteAverage,
-		VoteCount:   int(movie.VoteCount),
-	}, nil
+	return extractMovie(movie, credits), nil
 }
 
 // GetTVShow retrieves TV show info and credits by ID and returns a TVShow object.
@@ -158,37 +145,7 @@ func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &TVShow{
-		ID:          tvShow.ID,
-		Actors:      *extractTVActors(credits),
-		BackdropURL: backdropImgURL(tvShow.BackdropPath),
-		Crew:        *extractTVCrew(credits),
-		Genres:      *extractGenres(&tvShow.Genres),
-		Overview:    tvShow.Overview,
-		PosterURL:   posterImgURL(tvShow.PosterPath),
-		ReleaseDate: tvShow.FirstAirDate,
-		Studios:     *extractStudios(&tvShow.ProductionCompanies),
-		Status:      tvShow.Status,
-		Title:       tvShow.Name,
-		NextEpisode: func() *TVEpisode {
-			if tvShow.NextEpisodeToAir.ID == 0 {
-				return nil
-			}
-			return &TVEpisode{
-				ID:            tvShow.NextEpisodeToAir.ID,
-				TVShowID:      tvShow.ID,
-				PosterURL:     posterImgURL(tvShow.NextEpisodeToAir.StillPath),
-				EpisodeNumber: tvShow.NextEpisodeToAir.EpisodeNumber,
-				SeasonNumber:  tvShow.NextEpisodeToAir.SeasonNumber,
-				Name:          tvShow.NextEpisodeToAir.Name,
-				Overview:      tvShow.NextEpisodeToAir.Overview,
-				AirDate:       tvShow.NextEpisodeToAir.AirDate,
-			}
-		}(),
-		SeasonsCount: tvShow.NumberOfSeasons,
-		VoteAverage:  tvShow.VoteAverage,
-		VoteCount:    int(tvShow.VoteCount),
-	}, nil
+	return extractTVShow(tvShow, credits), nil
 }
 
 // GetTVEpisode retrieves the information of a TV episode by TV show ID, season number and episode number and returns a TVEpisode object.
@@ -197,16 +154,7 @@ func (m *mediaClient) GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode,
 	if err != nil {
 		return nil, err
 	}
-	return &TVEpisode{
-		ID:            episode.ID,
-		TVShowID:      tvId,
-		PosterURL:     posterImgURL(episode.StillPath),
-		EpisodeNumber: episode.EpisodeNumber,
-		SeasonNumber:  episode.SeasonNumber,
-		Name:          episode.Name,
-		Overview:      episode.Overview,
-		AirDate:       episode.AirDate,
-	}, nil
+	return extractTVEpisode(tvId, episode), nil
 }
 
 // GetTVSeasonEpisodes retrieves all episodes from a TV show season and returns a slice of TVEpisode objects.
@@ -299,6 +247,74 @@ func (m *mediaClient) GetMoviesByStudio(studioID int) (*[]Movie, error) {
 func (m *mediaClient) GetTVShowsByStudio(studioID int) (*[]TVShow, error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+// extractMovie extracts movie information from a tmdb.Movie object and returns a Movie object.
+// It uses the tmdb.MovieCredits object to extract actors, crew and studios.
+func extractMovie(movie *tmdb.Movie, credits *tmdb.MovieCredits) *Movie {
+	return &Movie{
+		ID:          movie.ID,
+		Actors:      *extractMovieActors(credits),
+		BackdropURL: backdropImgURL(movie.BackdropPath),
+		Crew:        *extractMovieCrew(credits),
+		Genres:      *extractGenres(&movie.Genres),
+		Overview:    movie.Overview,
+		PosterURL:   posterImgURL(movie.PosterPath),
+		ReleaseDate: movie.ReleaseDate,
+		Studios:     *extractStudios(&movie.ProductionCompanies),
+		Title:       movie.Title,
+		VoteAverage: movie.VoteAverage,
+		VoteCount:   int(movie.VoteCount),
+	}
+}
+
+// extractTVShow extracts TV show information from a tmdb.TVShow object and returns a TVShow object.
+func extractTVEpisode(tvId int, episode *tmdb.TvEpisode) *TVEpisode {
+	return &TVEpisode{
+		ID:            episode.ID,
+		TVShowID:      tvId,
+		PosterURL:     posterImgURL(episode.StillPath),
+		EpisodeNumber: episode.EpisodeNumber,
+		SeasonNumber:  episode.SeasonNumber,
+		Name:          episode.Name,
+		Overview:      episode.Overview,
+		AirDate:       episode.AirDate,
+	}
+}
+
+// extractTVShow extracts TV show information from a tmdb.TVShow object and returns a TVShow object.
+func extractTVShow(tvShow *tmdb.TV, credits *tmdb.TvCredits) *TVShow {
+	return &TVShow{
+		ID:          tvShow.ID,
+		Actors:      *extractTVActors(credits),
+		BackdropURL: backdropImgURL(tvShow.BackdropPath),
+		Crew:        *extractTVCrew(credits),
+		Genres:      *extractGenres(&tvShow.Genres),
+		Overview:    tvShow.Overview,
+		PosterURL:   posterImgURL(tvShow.PosterPath),
+		ReleaseDate: tvShow.FirstAirDate,
+		Studios:     *extractStudios(&tvShow.ProductionCompanies),
+		Status:      tvShow.Status,
+		Title:       tvShow.Name,
+		NextEpisode: func() *TVEpisode {
+			if tvShow.NextEpisodeToAir.ID == 0 {
+				return nil
+			}
+			return &TVEpisode{
+				ID:            tvShow.NextEpisodeToAir.ID,
+				TVShowID:      tvShow.ID,
+				PosterURL:     posterImgURL(tvShow.NextEpisodeToAir.StillPath),
+				EpisodeNumber: tvShow.NextEpisodeToAir.EpisodeNumber,
+				SeasonNumber:  tvShow.NextEpisodeToAir.SeasonNumber,
+				Name:          tvShow.NextEpisodeToAir.Name,
+				Overview:      tvShow.NextEpisodeToAir.Overview,
+				AirDate:       tvShow.NextEpisodeToAir.AirDate,
+			}
+		}(),
+		SeasonsCount: tvShow.NumberOfSeasons,
+		VoteAverage:  tvShow.VoteAverage,
+		VoteCount:    int(tvShow.VoteCount),
+	}
 }
 
 // extractMovieActors extracts actors from movie credits and returns a list of Person.
