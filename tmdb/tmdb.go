@@ -74,6 +74,20 @@ type MediaClient interface {
 	GetTVShow(id int) (*TVShow, error)
 	GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error)
 	GetTVSeasonEpisodes(id int, season int) (*[]TVEpisode, error)
+	GetTrendingMovies() (*[]Movie, error)
+	GetTrendingTVShows() (*[]TVShow, error)
+	GetRecentMovies() (*[]Movie, error)
+	GetRecentTVShows() (*[]TVShow, error)
+	SearchMovies(query string) (*[]Movie, error)
+	SearchTVShows(query string) (*[]TVShow, error)
+	GetMoviesByGenre(genreID int) (*[]Movie, error)
+	GetTVShowsByGenre(genreID int) (*[]TVShow, error)
+	GetMoviesByActor(actorID int) (*[]Movie, error)
+	GetTVShowsByActor(actorID int) (*[]TVShow, error)
+	GetMoviesByDirector(directorID int) (*[]Movie, error)
+	GetTVShowsByDirector(directorID int) (*[]TVShow, error)
+	GetMoviesByStudio(studioID int) (*[]Movie, error)
+	GetTVShowsByStudio(studioID int) (*[]TVShow, error)
 }
 
 type mediaClient struct {
