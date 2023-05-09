@@ -7,11 +7,14 @@ const emptyProfileURL = "https://bingemate.fr/assets/empty_profile.jpg"
 const emptyBackdropURL = "https://bingemate.fr/assets/empty_background.jpg"
 const emptyPosterURL = "https://bingemate.fr/assets/empty_poster.jpg"
 
+// Genre represents a movie/TV genre with its ID and name.
 type Genre struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
 
+// Person represents a person involved in a movie or TV show with their ID, character name,
+// real name, and the URL to their profile picture.
 type Person struct {
 	ID         int    `json:"id"`
 	Character  string `json:"character"`
@@ -19,12 +22,16 @@ type Person struct {
 	ProfileURL string `json:"profile_url"`
 }
 
+// Studio represents a movie/TV studio with its ID, name, and logo URL.
 type Studio struct {
 	ID      int    `json:"id"`
 	Name    string `json:"name"`
 	LogoURL string `json:"logo_url"`
 }
 
+// Movie represents a movie with its attributes such as ID, actors list (Person), backdrop URL,
+// crew list (Person), genre list (Genre), overview, poster URL, release date, studio list (Studio),
+// title, vote average, and vote count.
 type Movie struct {
 	ID          int      `json:"id"`
 	Actors      []Person `json:"actors"`
@@ -40,6 +47,8 @@ type Movie struct {
 	VoteCount   int      `json:"vote_count"`
 }
 
+// TVEpisode represents a TV episode with its attributes such as ID, TV show ID, poster URL,
+// season number, episode number, name, overview, and air date.
 type TVEpisode struct {
 	ID            int    `json:"id"`
 	TVShowID      int    `json:"tv_show_id"`
@@ -51,6 +60,9 @@ type TVEpisode struct {
 	AirDate       string `json:"air_date"`
 }
 
+// TVShow represents a TV show with its attributes such as ID, actors list (Person), backdrop URL,
+// crew list (Person), genre list (Genre), overview, poster URL, release date, studio list (Studio),
+// status, next episode (TVEpisode), title, seasons count, vote average, and vote count.
 type TVShow struct {
 	ID           int        `json:"id"`
 	Actors       []Person   `json:"actors"`
@@ -69,6 +81,7 @@ type TVShow struct {
 	VoteCount    int        `json:"vote_count"`
 }
 
+// MediaClient is an interface for a media client API.
 type MediaClient interface {
 	GetMovie(id int) (*Movie, error)
 	GetTVShow(id int) (*TVShow, error)
@@ -284,6 +297,7 @@ func (m *mediaClient) GetTVShowsByStudio(studioID int) (*[]TVShow, error) {
 	panic("implement me")
 }
 
+// extractMovieActors extracts actors from movie credits and returns a list of Person.
 func extractMovieActors(credits *tmdb.MovieCredits) *[]Person {
 	var actors = make([]Person, len(credits.Cast))
 	for i, cast := range credits.Cast {
@@ -297,6 +311,7 @@ func extractMovieActors(credits *tmdb.MovieCredits) *[]Person {
 	return &actors
 }
 
+// extractTVActors extracts actors from TV show credits and returns a list of Person.
 func extractTVActors(credits *tmdb.TvCredits) *[]Person {
 	var actors = make([]Person, len(credits.Cast))
 	for i, cast := range credits.Cast {
@@ -310,6 +325,7 @@ func extractTVActors(credits *tmdb.TvCredits) *[]Person {
 	return &actors
 }
 
+// extractMovieCrew extracts crew from movie credits and returns a list of Person.
 func extractMovieCrew(credits *tmdb.MovieCredits) *[]Person {
 	var crew = make([]Person, len(credits.Crew))
 	for i, cast := range credits.Crew {
@@ -323,6 +339,7 @@ func extractMovieCrew(credits *tmdb.MovieCredits) *[]Person {
 	return &crew
 }
 
+// extractTVCrew extracts crew from TV show credits and returns a list of Person.
 func extractTVCrew(credits *tmdb.TvCredits) *[]Person {
 	var crew = make([]Person, len(credits.Crew))
 	for i, cast := range credits.Crew {
@@ -336,6 +353,7 @@ func extractTVCrew(credits *tmdb.TvCredits) *[]Person {
 	return &crew
 }
 
+// extractGenres extracts genres from a list of genre structs and returns a list of Genre.
 func extractGenres(genres *[]struct {
 	ID   int
 	Name string
@@ -350,6 +368,7 @@ func extractGenres(genres *[]struct {
 	return &extractedGenres
 }
 
+// extractStudios extracts studios from a list of studio structs and returns a list of Studio.
 func extractStudios(studios *[]struct {
 	ID        int
 	Name      string
@@ -367,6 +386,7 @@ func extractStudios(studios *[]struct {
 	return &extractedStudios
 }
 
+// profileImgURL returns the URL of a profile image given its path or an empty string if the path is empty.
 func profileImgURL(path string) string {
 	if path == "" {
 		return emptyProfileURL
@@ -374,6 +394,7 @@ func profileImgURL(path string) string {
 	return imageBaseURL + path
 }
 
+// backdropImgURL returns the URL of a backdrop image given its path or an empty string if the path is empty.
 func backdropImgURL(path string) string {
 	if path == "" {
 		return emptyBackdropURL
@@ -381,6 +402,7 @@ func backdropImgURL(path string) string {
 	return imageBaseURL + path
 }
 
+// posterImgURL returns the URL of a poster image given its path or an empty string if the path is empty.
 func posterImgURL(path string) string {
 	if path == "" {
 		return emptyPosterURL
