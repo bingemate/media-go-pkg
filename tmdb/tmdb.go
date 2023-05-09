@@ -214,6 +214,76 @@ func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) (*[]TVEpisode, e
 	return &extractedEpisodes, nil
 }
 
+func (m *mediaClient) GetTrendingMovies() (*[]Movie, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetTrendingTVShows() (*[]TVShow, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetRecentMovies() (*[]Movie, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetRecentTVShows() (*[]TVShow, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) SearchMovies(query string) (*[]Movie, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) SearchTVShows(query string) (*[]TVShow, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetMoviesByGenre(genreID int) (*[]Movie, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetTVShowsByGenre(genreID int) (*[]TVShow, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetMoviesByActor(actorID int) (*[]Movie, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetTVShowsByActor(actorID int) (*[]TVShow, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetMoviesByDirector(directorID int) (*[]Movie, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetTVShowsByDirector(directorID int) (*[]TVShow, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetMoviesByStudio(studioID int) (*[]Movie, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mediaClient) GetTVShowsByStudio(studioID int) (*[]TVShow, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func extractMovieActors(credits *tmdb.MovieCredits) *[]Person {
 	var actors = make([]Person, len(credits.Cast))
 	for i, cast := range credits.Cast {
