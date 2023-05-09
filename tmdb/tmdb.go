@@ -268,6 +268,20 @@ func extractMovie(movie *tmdb.Movie, credits *tmdb.MovieCredits) *Movie {
 	}
 }
 
+// extractMovieShort extracts movie information from a tmdb.MovieShort object and returns a Movie object.
+func extractMovieShort(movie *tmdb.MovieShort) *Movie {
+	return &Movie{
+		ID:          movie.ID,
+		BackdropURL: backdropImgURL(movie.BackdropPath),
+		PosterURL:   posterImgURL(movie.PosterPath),
+		Title:       movie.Title,
+		Overview:    movie.Overview,
+		ReleaseDate: movie.ReleaseDate,
+		VoteAverage: movie.VoteAverage,
+		VoteCount:   int(movie.VoteCount),
+	}
+}
+
 // extractTVShow extracts TV show information from a tmdb.TVShow object and returns a TVShow object.
 func extractTVEpisode(tvId int, episode *tmdb.TvEpisode) *TVEpisode {
 	return &TVEpisode{
@@ -314,6 +328,20 @@ func extractTVShow(tvShow *tmdb.TV, credits *tmdb.TvCredits) *TVShow {
 		SeasonsCount: tvShow.NumberOfSeasons,
 		VoteAverage:  tvShow.VoteAverage,
 		VoteCount:    int(tvShow.VoteCount),
+	}
+}
+
+// extractTVShowShort extracts TV show information from a tmdb.TVShowShort object and returns a TVShow object.
+func extractTVShowShort(tvShow *tmdb.TvShort) *TVShow {
+	return &TVShow{
+		ID:          tvShow.ID,
+		BackdropURL: backdropImgURL(tvShow.BackdropPath),
+		PosterURL:   posterImgURL(tvShow.PosterPath),
+		Title:       tvShow.Name,
+		Overview:    tvShow.Overview,
+		ReleaseDate: tvShow.FirstAirDate,
+		VoteAverage: tvShow.VoteAverage,
+		VoteCount:   int(tvShow.VoteCount),
 	}
 }
 
