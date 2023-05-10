@@ -77,7 +77,7 @@ type TVShow struct {
 	Overview     string     `json:"overview"`
 	PosterURL    string     `json:"poster_url"`
 	ReleaseDate  string     `json:"release_date"`
-	Studios      []Studio   `json:"studios"`
+	Networks     []Studio   `json:"networks"`
 	Status       string     `json:"status"`
 	NextEpisode  *TVEpisode `json:"next_episode"`
 	Title        string     `json:"title"`
@@ -92,22 +92,22 @@ type TVShow struct {
 type MediaClient interface {
 	GetMovie(id int) (*Movie, error)
 	GetTVShow(id int) (*TVShow, error)
-	GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error) // TODO *[]TVEpisode -> []*TVEpisode
-	GetTVSeasonEpisodes(id int, season int) (*[]TVEpisode, error)     // TODO *[]TVEpisode -> []*TVEpisode
-	GetPopularMovies(page int) (*[]Movie, error)                      // TODO *[]Movie -> []*Movie
-	GetPopularTVShows(page int) (*[]TVShow, error)                    // TODO *[]TVShow -> []*TVShow
-	GetRecentMovies() (*[]Movie, error)                               // TODO *[]Movie -> []*Movie
-	GetRecentTVShows() (*[]TVShow, error)                             // TODO *[]TVShow -> []*TVShow
-	SearchMovies(query string, page int) (*[]Movie, error)            // TODO *[]Movie -> []*Movie
-	SearchTVShows(query string, page int) (*[]TVShow, error)          // TODO *[]TVShow -> []*TVShow
-	GetMoviesByGenre(genreID int, page int) (*[]Movie, error)         // TODO *[]Movie -> []*Movie
-	GetTVShowsByGenre(genreID int, page int) (*[]TVShow, error)       // TODO *[]TVShow -> []*TVShow
-	GetMoviesByActor(actorID int, page int) (*[]Movie, error)         // TODO *[]Movie -> []*Movie
-	GetTVShowsByActor(actorID int, page int) (*[]TVShow, error)       // TODO *[]TVShow -> []*TVShow
-	GetMoviesByDirector(directorID int, page int) (*[]Movie, error)   // TODO *[]Movie -> []*Movie
-	GetTVShowsByDirector(directorID int, page int) (*[]TVShow, error) // TODO *[]TVShow -> []*TVShow
-	GetMoviesByStudio(studioID int, page int) (*[]Movie, error)       // TODO *[]Movie -> []*Movie
-	GetTVShowsByStudio(studioID int, page int) (*[]TVShow, error)     // TODO *[]TVShow -> []*TVShow
+	GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error)
+	GetTVSeasonEpisodes(id int, season int) (*[]TVEpisode, error)
+	GetPopularMovies(page int) (*[]Movie, error)
+	GetPopularTVShows(page int) (*[]TVShow, error)
+	GetRecentMovies() (*[]Movie, error)
+	GetRecentTVShows() (*[]TVShow, error)
+	SearchMovies(query string, page int) (*[]Movie, error)
+	SearchTVShows(query string, page int) (*[]TVShow, error)
+	GetMoviesByGenre(genreID int, page int) (*[]Movie, error)
+	GetTVShowsByGenre(genreID int, page int) (*[]TVShow, error)
+	GetMoviesByActor(actorID int, page int) (*[]Movie, error)
+	GetTVShowsByActor(actorID int, page int) (*[]TVShow, error)
+	GetMoviesByDirector(directorID int, page int) (*[]Movie, error)
+	GetTVShowsByDirector(directorID int, page int) (*[]TVShow, error)
+	GetMoviesByStudio(studioID int, page int) (*[]Movie, error)
+	GetTVShowsByNetwork(studioID int, page int) (*[]TVShow, error)
 }
 
 type mediaClient struct {
@@ -268,52 +268,163 @@ func (m *mediaClient) GetRecentTVShows() (*[]TVShow, error) {
 	return &extractedTVShows, nil
 }
 
-func (m *mediaClient) SearchMovies(query string) (*[]Movie, error) {
-	//TODO implement me
-	panic("implement me")
+func (m *mediaClient) SearchMovies(query string, page int) (*[]Movie, error) {
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["region"] = "fr"
+	movies, err := m.tmdbClient.SearchMovie(query, options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedMovies = make([]Movie, len(movies.Results))
+	for i, movie := range movies.Results {
+		extractedMovies[i] = *extractMovieShort(&movie)
+	}
+	return &extractedMovies, nil
 }
 
-func (m *mediaClient) SearchTVShows(query string) (*[]TVShow, error) {
-	//TODO implement me
-	panic("implement me")
+func (m *mediaClient) SearchTVShows(query string, page int) (*[]TVShow, error) {
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	tvShows, err := m.tmdbClient.SearchTv(query, options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	for i, tvShow := range tvShows.Results {
+		extractedTVShows[i] = *extractTVShowResult(&tvShow)
+	}
+	return &extractedTVShows, nil
 }
 
-func (m *mediaClient) GetMoviesByGenre(genreID int) (*[]Movie, error) {
-	//TODO implement me
-	panic("implement me")
+func (m *mediaClient) GetMoviesByGenre(genreID int, page int) (*[]Movie, error) {
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["with_genres"] = strconv.Itoa(genreID)
+	movies, err := m.tmdbClient.DiscoverMovie(options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedMovies = make([]Movie, len(movies.Results))
+	for i, movie := range movies.Results {
+		extractedMovies[i] = *extractMovieShort(&movie)
+	}
+	return &extractedMovies, nil
 }
 
 func (m *mediaClient) GetTVShowsByGenre(genreID int, page int) (*[]TVShow, error) {
-	//TODO implement me
-	panic("implement me")
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["with_genres"] = strconv.Itoa(genreID)
+	tvShows, err := m.tmdbClient.DiscoverTV(options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	for i, tvShow := range tvShows.Results {
+		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+	}
+	return &extractedTVShows, nil
 }
 
 func (m *mediaClient) GetMoviesByActor(actorID int, page int) (*[]Movie, error) {
-	//TODO implement me
-	panic("implement me")
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["with_cast"] = strconv.Itoa(actorID)
+	movies, err := m.tmdbClient.DiscoverMovie(options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedMovies = make([]Movie, len(movies.Results))
+	for i, movie := range movies.Results {
+		extractedMovies[i] = *extractMovieShort(&movie)
+	}
+	return &extractedMovies, nil
 }
 
 func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*[]TVShow, error) {
-	//TODO implement me
-	panic("implement me")
+	//TODO: Test this function, not sure "with_cast" works on TV shows
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["with_cast"] = strconv.Itoa(actorID)
+	tvShows, err := m.tmdbClient.DiscoverTV(options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	for i, tvShow := range tvShows.Results {
+		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+	}
+	return &extractedTVShows, nil
 }
 
 func (m *mediaClient) GetMoviesByDirector(directorID int, page int) (*[]Movie, error) {
-	//TODO implement me
-	panic("implement me")
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["with_crew"] = strconv.Itoa(directorID)
+	movies, err := m.tmdbClient.DiscoverMovie(options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedMovies = make([]Movie, len(movies.Results))
+	for i, movie := range movies.Results {
+		extractedMovies[i] = *extractMovieShort(&movie)
+	}
+	return &extractedMovies, nil
 }
 
 func (m *mediaClient) GetTVShowsByDirector(directorID int, page int) (*[]TVShow, error) {
-	//TODO implement me
-	panic("implement me")
+	//TODO: Test this function, not sure "with_crew" works on TV shows
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["with_crew"] = strconv.Itoa(directorID)
+	tvShows, err := m.tmdbClient.DiscoverTV(options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	for i, tvShow := range tvShows.Results {
+		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+	}
+	return &extractedTVShows, nil
 }
 
 func (m *mediaClient) GetMoviesByStudio(studioID int, page int) (*[]Movie, error) {
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["with_companies"] = strconv.Itoa(studioID)
+	movies, err := m.tmdbClient.DiscoverMovie(options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedMovies = make([]Movie, len(movies.Results))
+	for i, movie := range movies.Results {
+		extractedMovies[i] = *extractMovieShort(&movie)
+	}
+	return &extractedMovies, nil
+}
+
+func (m *mediaClient) GetTVShowsByNetwork(studioID int, page int) (*[]TVShow, error) {
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["with_networks"] = strconv.Itoa(studioID)
+	tvShows, err := m.tmdbClient.DiscoverTV(options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	for i, tvShow := range tvShows.Results {
+		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+	}
+	return &extractedTVShows, nil
+}
+
+func (m *mediaClient) GetTVShowsNextEpisode(tvIds []int, startDate, endDate string) (*[]TVEpisodeRelease, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *mediaClient) GetTVShowsByStudio(studioID int, page int) (*[]TVShow, error) {
+func (m *mediaClient) GetMoviesReleases(movieIds []int, startDate, endDate string) (*[]MovieRelease, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -376,7 +487,7 @@ func extractTVShow(tvShow *tmdb.TV, credits *tmdb.TvCredits) *TVShow {
 		Overview:    tvShow.Overview,
 		PosterURL:   posterImgURL(tvShow.PosterPath),
 		ReleaseDate: tvShow.FirstAirDate,
-		Studios:     *extractStudios(&tvShow.ProductionCompanies),
+		Networks:    *extractStudios(&tvShow.Networks),
 		Status:      tvShow.Status,
 		Title:       tvShow.Name,
 		NextEpisode: func() *TVEpisode {
@@ -408,6 +519,29 @@ func extractTVShowShort(tvShow *tmdb.TvShort) *TVShow {
 		PosterURL:   posterImgURL(tvShow.PosterPath),
 		Title:       tvShow.Name,
 		Overview:    tvShow.Overview,
+		ReleaseDate: tvShow.FirstAirDate,
+		VoteAverage: tvShow.VoteAverage,
+		VoteCount:   int(tvShow.VoteCount),
+	}
+}
+
+func extractTVShowResult(tvShow *struct {
+	BackdropPath  string `json:"backdrop_path"`
+	ID            int
+	OriginalName  string   `json:"original_name"`
+	FirstAirDate  string   `json:"first_air_date"`
+	OriginCountry []string `json:"origin_country"`
+	PosterPath    string   `json:"poster_path"`
+	Popularity    float32
+	Name          string
+	VoteAverage   float32 `json:"vote_average"`
+	VoteCount     uint32  `json:"vote_count"`
+}) *TVShow {
+	return &TVShow{
+		ID:          tvShow.ID,
+		BackdropURL: backdropImgURL(tvShow.BackdropPath),
+		PosterURL:   posterImgURL(tvShow.PosterPath),
+		Title:       tvShow.Name,
 		ReleaseDate: tvShow.FirstAirDate,
 		VoteAverage: tvShow.VoteAverage,
 		VoteCount:   int(tvShow.VoteCount),
