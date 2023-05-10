@@ -65,6 +65,23 @@ type TVEpisode struct {
 	AirDate       string `json:"air_date"`
 }
 
+// TVEpisodeRelease represents a TV episode release with its attributes such as ID, name, episode
+type TVEpisodeRelease struct {
+	ID            int    `json:"id"`
+	Name          string `json:"name"`
+	EpisodeNumber int    `json:"episode_number"`
+	SeasonNumber  int    `json:"season_number"`
+	TVShowName    string `json:"tv_show_name"`
+	AirDate       string `json:"air_date"`
+}
+
+// MovieRelease represents a movie release with its attributes such as ID, title, and release date.
+type MovieRelease struct {
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	ReleaseDate string `json:"release_date"`
+}
+
 // TVShow represents a TV show with its attributes such as ID, actors list (Person), backdrop URL,
 // crew list (Person), genre list (Genre), overview, poster URL, release date, studio list (Studio),
 // status, next episode (TVEpisode), title, seasons count, vote average, and vote count.
@@ -108,6 +125,8 @@ type MediaClient interface {
 	GetTVShowsByDirector(directorID int, page int) (*[]TVShow, error)
 	GetMoviesByStudio(studioID int, page int) (*[]Movie, error)
 	GetTVShowsByNetwork(studioID int, page int) (*[]TVShow, error)
+	GetTVShowsNextEpisode(tvIds []int, startDate, endDate string) (*[]TVEpisodeRelease, error)
+	GetMoviesReleases(movieIds []int, startDate, endDate string) (*[]MovieRelease, error)
 }
 
 type mediaClient struct {
