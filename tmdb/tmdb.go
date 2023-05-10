@@ -177,8 +177,10 @@ func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) (*[]TVEpisode, e
 	return &extractedEpisodes, nil
 }
 
-func (m *mediaClient) GetPopularMovies() (*[]Movie, error) {
-	movies, err := m.tmdbClient.GetMoviePopular(m.options)
+func (m *mediaClient) GetPopularMovies(page int) (*[]Movie, error) {
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	movies, err := m.tmdbClient.GetMoviePopular(options)
 	if err != nil {
 		return nil, err
 	}
@@ -189,8 +191,10 @@ func (m *mediaClient) GetPopularMovies() (*[]Movie, error) {
 	return &extractedMovies, nil
 }
 
-func (m *mediaClient) GetPopularTVShows() (*[]TVShow, error) {
-	tvShows, err := m.tmdbClient.GetTvPopular(m.options)
+func (m *mediaClient) GetPopularTVShows(page int) (*[]TVShow, error) {
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	tvShows, err := m.tmdbClient.GetTvPopular(options)
 	if err != nil {
 		return nil, err
 	}
@@ -202,10 +206,7 @@ func (m *mediaClient) GetPopularTVShows() (*[]TVShow, error) {
 }
 
 func (m *mediaClient) GetRecentMovies() (*[]Movie, error) {
-	var options = make(map[string]string)
-	for k, v := range m.options {
-		options[k] = v
-	}
+	options := extractOptions(m.options)
 	options["region"] = "fr"
 	movies := make([]tmdb.MovieShort, 0)
 	// Get the 100 most recent movies in France (20 per page)
@@ -243,10 +244,7 @@ func (m *mediaClient) GetRecentMovies() (*[]Movie, error) {
 }
 
 func (m *mediaClient) GetRecentTVShows() (*[]TVShow, error) {
-	var options = make(map[string]string)
-	for k, v := range m.options {
-		options[k] = v
-	}
+	options := extractOptions(m.options)
 	tvshows := make([]tmdb.TvShort, 0)
 	// Get the 100 most recent tvshows in France (20 per page)
 	for page := 1; page <= 5; page++ {
@@ -285,37 +283,37 @@ func (m *mediaClient) GetMoviesByGenre(genreID int) (*[]Movie, error) {
 	panic("implement me")
 }
 
-func (m *mediaClient) GetTVShowsByGenre(genreID int) (*[]TVShow, error) {
+func (m *mediaClient) GetTVShowsByGenre(genreID int, page int) (*[]TVShow, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *mediaClient) GetMoviesByActor(actorID int) (*[]Movie, error) {
+func (m *mediaClient) GetMoviesByActor(actorID int, page int) (*[]Movie, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *mediaClient) GetTVShowsByActor(actorID int) (*[]TVShow, error) {
+func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*[]TVShow, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *mediaClient) GetMoviesByDirector(directorID int) (*[]Movie, error) {
+func (m *mediaClient) GetMoviesByDirector(directorID int, page int) (*[]Movie, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *mediaClient) GetTVShowsByDirector(directorID int) (*[]TVShow, error) {
+func (m *mediaClient) GetTVShowsByDirector(directorID int, page int) (*[]TVShow, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *mediaClient) GetMoviesByStudio(studioID int) (*[]Movie, error) {
+func (m *mediaClient) GetMoviesByStudio(studioID int, page int) (*[]Movie, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *mediaClient) GetTVShowsByStudio(studioID int) (*[]TVShow, error) {
+func (m *mediaClient) GetTVShowsByStudio(studioID int, page int) (*[]TVShow, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -527,4 +525,12 @@ func posterImgURL(path string) string {
 		return emptyPosterURL
 	}
 	return imageBaseURL + path
+}
+
+func extractOptions(options map[string]string) map[string]string {
+	var opts = make(map[string]string)
+	for key, value := range options {
+		opts[key] = value
+	}
+	return opts
 }
