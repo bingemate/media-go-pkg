@@ -1,6 +1,11 @@
 package tmdb
 
-import "github.com/ryanbradynd05/go-tmdb"
+import (
+	"github.com/ryanbradynd05/go-tmdb"
+	"sort"
+	"strconv"
+	"time"
+)
 
 const imageBaseURL = "https://image.tmdb.org/t/p/original"
 const emptyProfileURL = "https://bingemate.fr/assets/empty_profile.jpg"
@@ -195,12 +200,72 @@ func (m *mediaClient) GetPopularTVShows() (*[]TVShow, error) {
 }
 
 func (m *mediaClient) GetRecentMovies() (*[]Movie, error) {
-	movies, err := m.tmdbClient.GetMovieReleases()
+	var options = make(map[string]string)
+	for k, v := range m.options {
+		options[k] = v
+	}
+	options["region"] = "fr"
+	movies := make([]tmdb.MovieShort, 0)
+	// Get the 100 most recent movies in France (20 per page)
+	for page := 1; page <= 5; page++ {
+		options["page"] = strconv.Itoa(page)
+		retrievedMovies, err := m.tmdbClient.GetMovieNowPlaying(options)
+		if err != nil {
+			return nil, err
+		}
+		movies = append(movies, retrievedMovies.Results...)
+	}
+	// Sort them by popularity
+	sort.Slice(movies, func(i, j int) bool {
+		return movies[i].Popularity > movies[j].Popularity
+	})
+	var extractedMovies = make([]Movie, 0)
+	// Get the 20 most popular
+	for _, movie := range movies[:20] {
+		extractedMovies = append(extractedMovies, *extractMovieShort(&movie))
+	}
+	// Sort them by release date (the most recent first)
+	sort.Slice(extractedMovies, func(i, j int) bool {
+		releaseDateI, err := time.Parse("2006-01-02", extractedMovies[i].ReleaseDate)
+		if err != nil {
+			return false
+		}
+		releaseDateJ, err := time.Parse("2006-01-02", extractedMovies[j].ReleaseDate)
+		if err != nil {
+			return false
+		}
+		return releaseDateI.After(releaseDateJ)
+	})
+	// Return result
+	return &extractedMovies, nil
 }
 
 func (m *mediaClient) GetRecentTVShows() (*[]TVShow, error) {
-	//TODO implement me
-	panic("implement me")
+	var options = make(map[string]string)
+	for k, v := range m.options {
+		options[k] = v
+	}
+	tvshows := make([]tmdb.TvShort, 0)
+	// Get the 100 most recent tvshows in France (20 per page)
+	for page := 1; page <= 5; page++ {
+		options["page"] = strconv.Itoa(page)
+		retrievedTVShows, err := m.tmdbClient.GetTvAiringToday(options)
+		if err != nil {
+			return nil, err
+		}
+		tvshows = append(tvshows, retrievedTVShows.Results...)
+	}
+	// Sort them by popularity
+	sort.Slice(tvshows, func(i, j int) bool {
+		return tvshows[i].Popularity > tvshows[j].Popularity
+	})
+	var extractedTVShows = make([]TVShow, 0)
+	// Get the 20 most popular
+	for _, tvshow := range tvshows[:20] {
+		extractedTVShows = append(extractedTVShows, *extractTVShowShort(&tvshow))
+	}
+	// Return result
+	return &extractedTVShows, nil
 }
 
 func (m *mediaClient) SearchMovies(query string) (*[]Movie, error) {
