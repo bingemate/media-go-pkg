@@ -76,8 +76,8 @@ type TVEpisodeRelease struct {
 	AirDate       string `json:"air_date"`
 }
 
-func (e *TVEpisode) ToEpisodeRelease(tvShowName string) TVEpisodeRelease {
-	return TVEpisodeRelease{
+func (e *TVEpisode) ToEpisodeRelease(tvShowName string) *TVEpisodeRelease {
+	return &TVEpisodeRelease{
 		ID:            e.ID,
 		Name:          e.Name,
 		EpisodeNumber: e.EpisodeNumber,
@@ -94,8 +94,8 @@ type MovieRelease struct {
 	ReleaseDate string `json:"release_date"`
 }
 
-func (m *Movie) ToMovieRelease() MovieRelease {
-	return MovieRelease{
+func (m *Movie) ToMovieRelease() *MovieRelease {
+	return &MovieRelease{
 		ID:          m.ID,
 		Title:       m.Title,
 		ReleaseDate: m.ReleaseDate,
@@ -123,32 +123,42 @@ type TVShow struct {
 	VoteCount    int        `json:"vote_count"`
 }
 
-//TODO Create a result struct wrapper that contains the results and the total pages
+type PaginatedMovieResults struct {
+	Results     []*Movie
+	TotalPage   int
+	TotalResult int
+}
+
+type PaginatedTVShowResults struct {
+	Results     []*TVShow
+	TotalPage   int
+	TotalResult int
+}
 
 // MediaClient is an interface for a media client API.
 type MediaClient interface {
 	GetMovie(id int) (*Movie, error)
 	GetTVShow(id int) (*TVShow, error)
 	GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error)
-	GetTVSeasonEpisodes(id int, season int) (*[]TVEpisode, error)
-	GetPopularMovies(page int) (*[]Movie, error)
-	GetPopularTVShows(page int) (*[]TVShow, error)
-	GetRecentMovies() (*[]Movie, error)
-	GetRecentTVShows() (*[]TVShow, error)
-	SearchMovies(query string, page int) (*[]Movie, error)
-	SearchTVShows(query string, page int) (*[]TVShow, error)
-	GetMoviesByGenre(genreID int, page int) (*[]Movie, error)
-	GetTVShowsByGenre(genreID int, page int) (*[]TVShow, error)
-	GetMoviesByActor(actorID int, page int) (*[]Movie, error)
-	GetTVShowsByActor(actorID int, page int) (*[]TVShow, error)
-	GetMoviesByDirector(directorID int, page int) (*[]Movie, error)
-	GetTVShowsByDirector(directorID int, page int) (*[]TVShow, error)
-	GetMoviesByStudio(studioID int, page int) (*[]Movie, error)
-	GetTVShowsByNetwork(studioID int, page int) (*[]TVShow, error)
-	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) (*[]TVEpisodeRelease, error)
-	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) (*[]MovieRelease, error)
-	GetMovieRecommendations(movieId int) (*[]Movie, error)
-	GetTVShowRecommendations(tvShowId int) (*[]TVShow, error)
+	GetTVSeasonEpisodes(id int, season int) ([]*TVEpisode, error)
+	GetPopularMovies(page int) (*PaginatedMovieResults, error)
+	GetPopularTVShows(page int) (*PaginatedTVShowResults, error)
+	GetRecentMovies() ([]*Movie, error)
+	GetRecentTVShows() ([]*TVShow, error)
+	SearchMovies(query string, page int) (*PaginatedMovieResults, error)
+	SearchTVShows(query string, page int) (*PaginatedTVShowResults, error)
+	GetMoviesByGenre(genreID int, page int) (*PaginatedMovieResults, error)
+	GetTVShowsByGenre(genreID int, page int) (*PaginatedTVShowResults, error)
+	GetMoviesByActor(actorID int, page int) (*PaginatedMovieResults, error)
+	GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error)
+	GetMoviesByDirector(directorID int, page int) (*PaginatedMovieResults, error)
+	GetTVShowsByDirector(directorID int, page int) (*PaginatedTVShowResults, error)
+	GetMoviesByStudio(studioID int, page int) (*PaginatedMovieResults, error)
+	GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error)
+	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisodeRelease, error)
+	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error)
+	GetMovieRecommendations(movieId int) ([]*Movie, error)
+	GetTVShowRecommendations(tvShowId int) ([]*TVShow, error)
 }
 
 type mediaClient struct {
@@ -208,50 +218,58 @@ func (m *mediaClient) GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode,
 }
 
 // GetTVSeasonEpisodes retrieves all episodes from a TV show season and returns a slice of TVEpisode objects.
-func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) (*[]TVEpisode, error) {
+func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) ([]*TVEpisode, error) {
 	episodes, err := m.tmdbClient.GetTvSeasonInfo(tvId, season, m.options)
 	if err != nil {
 		return nil, err
 	}
-	var extractedEpisodes = make([]TVEpisode, len(episodes.Episodes))
+	var extractedEpisodes = make([]*TVEpisode, len(episodes.Episodes))
 	for i, episode := range episodes.Episodes {
-		extractedEpisodes[i] = *extractTVEpisode(tvId, &episode)
+		extractedEpisodes[i] = extractTVEpisode(tvId, &episode)
 	}
-	return &extractedEpisodes, nil
+	return extractedEpisodes, nil
 }
 
 // GetPopularMovies retrieves the most popular movies and returns a slice of Movie objects.
-func (m *mediaClient) GetPopularMovies(page int) (*[]Movie, error) {
+func (m *mediaClient) GetPopularMovies(page int) (*PaginatedMovieResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	movies, err := m.tmdbClient.GetMoviePopular(options)
 	if err != nil {
 		return nil, err
 	}
-	var extractedMovies = make([]Movie, len(movies.Results))
+	var extractedMovies = make([]*Movie, len(movies.Results))
 	for i, movie := range movies.Results {
-		extractedMovies[i] = *extractMovieShort(&movie)
+		extractedMovies[i] = extractMovieShort(&movie)
 	}
-	return &extractedMovies, nil
+	return &PaginatedMovieResults{
+		Results:     extractedMovies,
+		TotalPage:   movies.TotalPages,
+		TotalResult: movies.TotalResults,
+	}, nil
 }
 
 // GetPopularTVShows retrieves the most popular TV shows and returns a slice of TVShow objects.
-func (m *mediaClient) GetPopularTVShows(page int) (*[]TVShow, error) {
+func (m *mediaClient) GetPopularTVShows(page int) (*PaginatedTVShowResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	tvShows, err := m.tmdbClient.GetTvPopular(options)
 	if err != nil {
 		return nil, err
 	}
-	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	var extractedTVShows = make([]*TVShow, len(tvShows.Results))
 	for i, tvShow := range tvShows.Results {
-		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+		extractedTVShows[i] = extractTVShowShort(&tvShow)
 	}
-	return &extractedTVShows, nil
+	return &PaginatedTVShowResults{
+		Results:     extractedTVShows,
+		TotalPage:   tvShows.TotalPages,
+		TotalResult: tvShows.TotalResults,
+	}, nil
 }
 
 // GetRecentMovies retrieves the most recent movies and returns a slice of Movie objects.
-func (m *mediaClient) GetRecentMovies() (*[]Movie, error) {
+func (m *mediaClient) GetRecentMovies() ([]*Movie, error) {
 	options := extractOptions(m.options)
 	options["region"] = "fr"
 	movies := make([]tmdb.MovieShort, 0)
@@ -268,10 +286,10 @@ func (m *mediaClient) GetRecentMovies() (*[]Movie, error) {
 	sort.Slice(movies, func(i, j int) bool {
 		return movies[i].Popularity > movies[j].Popularity
 	})
-	var extractedMovies = make([]Movie, 0)
+	var extractedMovies = make([]*Movie, 0)
 	// Get the 20 most popular
 	for _, movie := range movies[:20] {
-		extractedMovies = append(extractedMovies, *extractMovieShort(&movie))
+		extractedMovies = append(extractedMovies, extractMovieShort(&movie))
 	}
 	// Sort them by release date (the most recent first)
 	sort.Slice(extractedMovies, func(i, j int) bool {
@@ -286,11 +304,11 @@ func (m *mediaClient) GetRecentMovies() (*[]Movie, error) {
 		return releaseDateI.After(releaseDateJ)
 	})
 	// Return result
-	return &extractedMovies, nil
+	return extractedMovies, nil
 }
 
 // GetRecentTVShows retrieves the most recent TV shows and returns a slice of TVShow objects.
-func (m *mediaClient) GetRecentTVShows() (*[]TVShow, error) {
+func (m *mediaClient) GetRecentTVShows() ([]*TVShow, error) {
 	options := extractOptions(m.options)
 	tvshows := make([]tmdb.TvShort, 0)
 	// Get the 100 most recent tvshows in France (20 per page)
@@ -306,17 +324,17 @@ func (m *mediaClient) GetRecentTVShows() (*[]TVShow, error) {
 	sort.Slice(tvshows, func(i, j int) bool {
 		return tvshows[i].Popularity > tvshows[j].Popularity
 	})
-	var extractedTVShows = make([]TVShow, 0)
+	var extractedTVShows = make([]*TVShow, 0)
 	// Get the 20 most popular
 	for _, tvshow := range tvshows[:20] {
-		extractedTVShows = append(extractedTVShows, *extractTVShowShort(&tvshow))
+		extractedTVShows = append(extractedTVShows, extractTVShowShort(&tvshow))
 	}
 	// Return result
-	return &extractedTVShows, nil
+	return extractedTVShows, nil
 }
 
 // SearchMovies searches for movies matching the given query and returns a slice of Movie objects.
-func (m *mediaClient) SearchMovies(query string, page int) (*[]Movie, error) {
+func (m *mediaClient) SearchMovies(query string, page int) (*PaginatedMovieResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["region"] = "fr"
@@ -324,30 +342,38 @@ func (m *mediaClient) SearchMovies(query string, page int) (*[]Movie, error) {
 	if err != nil {
 		return nil, err
 	}
-	var extractedMovies = make([]Movie, len(movies.Results))
+	var extractedMovies = make([]*Movie, len(movies.Results))
 	for i, movie := range movies.Results {
-		extractedMovies[i] = *extractMovieShort(&movie)
+		extractedMovies[i] = extractMovieShort(&movie)
 	}
-	return &extractedMovies, nil
+	return &PaginatedMovieResults{
+		TotalPage:   movies.TotalPages,
+		TotalResult: movies.TotalResults,
+		Results:     extractedMovies,
+	}, nil
 }
 
 // SearchTVShows searches for TV shows matching the given query and returns a slice of TVShow objects.
-func (m *mediaClient) SearchTVShows(query string, page int) (*[]TVShow, error) {
+func (m *mediaClient) SearchTVShows(query string, page int) (*PaginatedTVShowResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	tvShows, err := m.tmdbClient.SearchTv(query, options)
 	if err != nil {
 		return nil, err
 	}
-	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	var extractedTVShows = make([]*TVShow, len(tvShows.Results))
 	for i, tvShow := range tvShows.Results {
-		extractedTVShows[i] = *extractTVShowResult(&tvShow)
+		extractedTVShows[i] = extractTVShowResult(&tvShow)
 	}
-	return &extractedTVShows, nil
+	return &PaginatedTVShowResults{
+		TotalPage:   tvShows.TotalPages,
+		TotalResult: tvShows.TotalResults,
+		Results:     extractedTVShows,
+	}, nil
 }
 
 // GetMoviesByGenre retrieves movies of the given genre and returns a slice of Movie objects.
-func (m *mediaClient) GetMoviesByGenre(genreID int, page int) (*[]Movie, error) {
+func (m *mediaClient) GetMoviesByGenre(genreID int, page int) (*PaginatedMovieResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["with_genres"] = strconv.Itoa(genreID)
@@ -355,15 +381,19 @@ func (m *mediaClient) GetMoviesByGenre(genreID int, page int) (*[]Movie, error) 
 	if err != nil {
 		return nil, err
 	}
-	var extractedMovies = make([]Movie, len(movies.Results))
+	var extractedMovies = make([]*Movie, len(movies.Results))
 	for i, movie := range movies.Results {
-		extractedMovies[i] = *extractMovieShort(&movie)
+		extractedMovies[i] = extractMovieShort(&movie)
 	}
-	return &extractedMovies, nil
+	return &PaginatedMovieResults{
+		TotalPage:   movies.TotalPages,
+		TotalResult: movies.TotalResults,
+		Results:     extractedMovies,
+	}, nil
 }
 
 // GetTVShowsByGenre retrieves TV shows of the given genre and returns a slice of TVShow objects.
-func (m *mediaClient) GetTVShowsByGenre(genreID int, page int) (*[]TVShow, error) {
+func (m *mediaClient) GetTVShowsByGenre(genreID int, page int) (*PaginatedTVShowResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["with_genres"] = strconv.Itoa(genreID)
@@ -371,15 +401,19 @@ func (m *mediaClient) GetTVShowsByGenre(genreID int, page int) (*[]TVShow, error
 	if err != nil {
 		return nil, err
 	}
-	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	var extractedTVShows = make([]*TVShow, len(tvShows.Results))
 	for i, tvShow := range tvShows.Results {
-		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+		extractedTVShows[i] = extractTVShowShort(&tvShow)
 	}
-	return &extractedTVShows, nil
+	return &PaginatedTVShowResults{
+		TotalPage:   tvShows.TotalPages,
+		TotalResult: tvShows.TotalResults,
+		Results:     extractedTVShows,
+	}, nil
 }
 
 // GetMoviesByActor retrieves movies starring the given actor and returns a slice of Movie objects.
-func (m *mediaClient) GetMoviesByActor(actorID int, page int) (*[]Movie, error) {
+func (m *mediaClient) GetMoviesByActor(actorID int, page int) (*PaginatedMovieResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["with_cast"] = strconv.Itoa(actorID)
@@ -387,15 +421,19 @@ func (m *mediaClient) GetMoviesByActor(actorID int, page int) (*[]Movie, error) 
 	if err != nil {
 		return nil, err
 	}
-	var extractedMovies = make([]Movie, len(movies.Results))
+	var extractedMovies = make([]*Movie, len(movies.Results))
 	for i, movie := range movies.Results {
-		extractedMovies[i] = *extractMovieShort(&movie)
+		extractedMovies[i] = extractMovieShort(&movie)
 	}
-	return &extractedMovies, nil
+	return &PaginatedMovieResults{
+		TotalPage:   movies.TotalPages,
+		TotalResult: movies.TotalResults,
+		Results:     extractedMovies,
+	}, nil
 }
 
 // GetTVShowsByActor retrieves TV shows starring the given actor and returns a slice of TVShow objects.
-func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*[]TVShow, error) {
+func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error) {
 	//TODO: Test this function, not sure "with_cast" works on TV shows
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
@@ -404,15 +442,19 @@ func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*[]TVShow, error
 	if err != nil {
 		return nil, err
 	}
-	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	var extractedTVShows = make([]*TVShow, len(tvShows.Results))
 	for i, tvShow := range tvShows.Results {
-		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+		extractedTVShows[i] = extractTVShowShort(&tvShow)
 	}
-	return &extractedTVShows, nil
+	return &PaginatedTVShowResults{
+		TotalPage:   tvShows.TotalPages,
+		TotalResult: tvShows.TotalResults,
+		Results:     extractedTVShows,
+	}, nil
 }
 
 // GetMoviesByDirector retrieves movies directed by the given director and returns a slice of Movie objects.
-func (m *mediaClient) GetMoviesByDirector(directorID int, page int) (*[]Movie, error) {
+func (m *mediaClient) GetMoviesByDirector(directorID int, page int) (*PaginatedMovieResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["with_crew"] = strconv.Itoa(directorID)
@@ -420,15 +462,19 @@ func (m *mediaClient) GetMoviesByDirector(directorID int, page int) (*[]Movie, e
 	if err != nil {
 		return nil, err
 	}
-	var extractedMovies = make([]Movie, len(movies.Results))
+	var extractedMovies = make([]*Movie, len(movies.Results))
 	for i, movie := range movies.Results {
-		extractedMovies[i] = *extractMovieShort(&movie)
+		extractedMovies[i] = extractMovieShort(&movie)
 	}
-	return &extractedMovies, nil
+	return &PaginatedMovieResults{
+		TotalPage:   movies.TotalPages,
+		TotalResult: movies.TotalResults,
+		Results:     extractedMovies,
+	}, nil
 }
 
 // GetTVShowsByDirector retrieves TV shows directed by the given director and returns a slice of TVShow objects.
-func (m *mediaClient) GetTVShowsByDirector(directorID int, page int) (*[]TVShow, error) {
+func (m *mediaClient) GetTVShowsByDirector(directorID int, page int) (*PaginatedTVShowResults, error) {
 	//TODO: Test this function, not sure "with_crew" works on TV shows
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
@@ -437,15 +483,19 @@ func (m *mediaClient) GetTVShowsByDirector(directorID int, page int) (*[]TVShow,
 	if err != nil {
 		return nil, err
 	}
-	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	var extractedTVShows = make([]*TVShow, len(tvShows.Results))
 	for i, tvShow := range tvShows.Results {
-		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+		extractedTVShows[i] = extractTVShowShort(&tvShow)
 	}
-	return &extractedTVShows, nil
+	return &PaginatedTVShowResults{
+		TotalResult: tvShows.TotalResults,
+		TotalPage:   tvShows.TotalPages,
+		Results:     extractedTVShows,
+	}, nil
 }
 
 // GetMoviesByStudio retrieves movies produced by the given studio and returns a slice of Movie objects.
-func (m *mediaClient) GetMoviesByStudio(studioID int, page int) (*[]Movie, error) {
+func (m *mediaClient) GetMoviesByStudio(studioID int, page int) (*PaginatedMovieResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["with_companies"] = strconv.Itoa(studioID)
@@ -453,15 +503,19 @@ func (m *mediaClient) GetMoviesByStudio(studioID int, page int) (*[]Movie, error
 	if err != nil {
 		return nil, err
 	}
-	var extractedMovies = make([]Movie, len(movies.Results))
+	var extractedMovies = make([]*Movie, len(movies.Results))
 	for i, movie := range movies.Results {
-		extractedMovies[i] = *extractMovieShort(&movie)
+		extractedMovies[i] = extractMovieShort(&movie)
 	}
-	return &extractedMovies, nil
+	return &PaginatedMovieResults{
+		TotalPage:   movies.TotalPages,
+		TotalResult: movies.TotalResults,
+		Results:     extractedMovies,
+	}, nil
 }
 
 // GetTVShowsByNetwork retrieves TV shows produced by the given studio and returns a slice of TVShow objects.
-func (m *mediaClient) GetTVShowsByNetwork(studioID int, page int) (*[]TVShow, error) {
+func (m *mediaClient) GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error) {
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["with_networks"] = strconv.Itoa(studioID)
@@ -469,17 +523,21 @@ func (m *mediaClient) GetTVShowsByNetwork(studioID int, page int) (*[]TVShow, er
 	if err != nil {
 		return nil, err
 	}
-	var extractedTVShows = make([]TVShow, len(tvShows.Results))
+	var extractedTVShows = make([]*TVShow, len(tvShows.Results))
 	for i, tvShow := range tvShows.Results {
-		extractedTVShows[i] = *extractTVShowShort(&tvShow)
+		extractedTVShows[i] = extractTVShowShort(&tvShow)
 	}
-	return &extractedTVShows, nil
+	return &PaginatedTVShowResults{
+		TotalPage:   tvShows.TotalPages,
+		TotalResult: tvShows.TotalResults,
+		Results:     extractedTVShows,
+	}, nil
 }
 
 // GetTVShowsReleases retrieves all TV shows airing between the given dates and returns a slice of TVEpisodeRelease objects.
-func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) (*[]TVEpisodeRelease, error) {
+func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisodeRelease, error) {
 	// Get all episodes for the given TV shows that are airing between the given dates
-	var episodes []TVEpisodeRelease
+	var episodes []*TVEpisodeRelease
 	for _, tvID := range tvIds {
 		tvShow, err := m.GetTVShow(tvID)
 		if err != nil {
@@ -491,7 +549,7 @@ func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Ti
 			if err != nil {
 				return nil, err
 			}
-			for _, episode := range *seasonEpisodes {
+			for _, episode := range seasonEpisodes {
 				airDate, err := time.Parse("2006-01-02", episode.AirDate)
 				if err != nil {
 					log.Printf("Could not parse air date %s for episode %d of TV show %d",
@@ -506,12 +564,12 @@ func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Ti
 			}
 		}
 	}
-	return &episodes, nil
+	return episodes, nil
 }
 
 // GetMoviesReleases retrieves all movies released between the given dates and returns a slice of MovieRelease objects.
-func (m *mediaClient) GetMoviesReleases(movieIds []int, startDate, endDate time.Time) (*[]MovieRelease, error) {
-	var movies []MovieRelease
+func (m *mediaClient) GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error) {
+	var movies []*MovieRelease
 	for _, movieID := range movieIds {
 		movie, err := m.GetMovie(movieID)
 		if err != nil {
@@ -529,41 +587,41 @@ func (m *mediaClient) GetMoviesReleases(movieIds []int, startDate, endDate time.
 			movies = append(movies, movie.ToMovieRelease())
 		}
 	}
-	return &movies, nil
+	return movies, nil
 }
 
 // GetMovieRecommendations retrieves movie recommendations for the given movie and returns a slice of Movie objects.
-func (m *mediaClient) GetMovieRecommendations(movieId int) (*[]Movie, error) {
+func (m *mediaClient) GetMovieRecommendations(movieId int) ([]*Movie, error) {
 	recommendations, err := m.tmdbClient.GetMovieRecommendations(movieId, m.options)
 	if err != nil {
 		return nil, err
 	}
-	movies := make([]Movie, len(recommendations.Results))
+	movies := make([]*Movie, len(recommendations.Results))
 	for i, movieRecommendation := range recommendations.Results {
 		movie, err := m.GetMovie(movieRecommendation.ID)
 		if err != nil {
 			return nil, err
 		}
-		movies[i] = *movie
+		movies[i] = movie
 	}
-	return &movies, nil
+	return movies, nil
 }
 
 // GetTVShowRecommendations retrieves TV show recommendations for the given TV show and returns a slice of TVShow objects.
-func (m *mediaClient) GetTVShowRecommendations(tvShowId int) (*[]TVShow, error) {
+func (m *mediaClient) GetTVShowRecommendations(tvShowId int) ([]*TVShow, error) {
 	recommendations, err := m.tmdbClient.GetTvRecommendations(tvShowId, m.options)
 	if err != nil {
 		return nil, err
 	}
-	tvShows := make([]TVShow, len(recommendations.Results))
+	tvShows := make([]*TVShow, len(recommendations.Results))
 	for i, tvShowRecommendation := range recommendations.Results {
 		tvShow, err := m.GetTVShow(tvShowRecommendation.ID)
 		if err != nil {
 			return nil, err
 		}
-		tvShows[i] = *tvShow
+		tvShows[i] = tvShow
 	}
-	return &tvShows, nil
+	return tvShows, nil
 }
 
 // extractMovie extracts movie information from a tmdb.Movie object and returns a Movie object.
