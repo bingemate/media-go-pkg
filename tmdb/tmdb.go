@@ -25,14 +25,14 @@ type Person struct {
 	ID         int    `json:"id"`
 	Character  string `json:"character"`
 	Name       string `json:"name"`
-	ProfileURL string `json:"profile_url"`
+	ProfileURL string `json:"profileUrl"`
 }
 
 // Studio represents a movie/TV studio with its ID, name, and logo URL.
 type Studio struct {
 	ID      int    `json:"id"`
 	Name    string `json:"name"`
-	LogoURL string `json:"logo_url"`
+	LogoURL string `json:"logoUrl"`
 }
 
 // Movie represents a movie with its attributes such as ID, actors list (Person), backdrop URL,
@@ -41,39 +41,39 @@ type Studio struct {
 type Movie struct {
 	ID          int      `json:"id"`
 	Actors      []Person `json:"actors"`
-	BackdropURL string   `json:"backdrop_url"`
+	BackdropURL string   `json:"backdropUrl"`
 	Crew        []Person `json:"crew"`
 	Genres      []Genre  `json:"genres"`
 	Overview    string   `json:"overview"`
-	PosterURL   string   `json:"poster_url"`
-	ReleaseDate string   `json:"release_date"`
+	PosterURL   string   `json:"posterUrl"`
+	ReleaseDate string   `json:"releaseDate"`
 	Studios     []Studio `json:"studios"`
 	Title       string   `json:"title"`
-	VoteAverage float32  `json:"vote_average"`
-	VoteCount   int      `json:"vote_count"`
+	VoteAverage float32  `json:"voteAverage"`
+	VoteCount   int      `json:"voteCount"`
 }
 
 // TVEpisode represents a TV episode with its attributes such as ID, TV show ID, poster URL,
 // season number, episode number, name, overview, and air date.
 type TVEpisode struct {
 	ID            int    `json:"id"`
-	TVShowID      int    `json:"tv_show_id"`
-	PosterURL     string `json:"poster_url"`
-	EpisodeNumber int    `json:"episode_number"`
-	SeasonNumber  int    `json:"season_number"`
+	TVShowID      int    `json:"tvShowId"`
+	PosterURL     string `json:"posterUrl"`
+	EpisodeNumber int    `json:"episodeNumber"`
+	SeasonNumber  int    `json:"seasonNumber"`
 	Name          string `json:"name"`
 	Overview      string `json:"overview"`
-	AirDate       string `json:"air_date"`
+	AirDate       string `json:"airDate"`
 }
 
 // TVEpisodeRelease represents a TV episode release with its attributes such as ID, name, episode
 type TVEpisodeRelease struct {
 	ID            int    `json:"id"`
 	Name          string `json:"name"`
-	EpisodeNumber int    `json:"episode_number"`
-	SeasonNumber  int    `json:"season_number"`
-	TVShowName    string `json:"tv_show_name"`
-	AirDate       string `json:"air_date"`
+	EpisodeNumber int    `json:"episodeNumber"`
+	SeasonNumber  int    `json:"seasonNumber"`
+	TVShowName    string `json:"tvShowName"`
+	AirDate       string `json:"airDate"`
 }
 
 func (e *TVEpisode) ToEpisodeRelease(tvShowName string) *TVEpisodeRelease {
@@ -91,7 +91,7 @@ func (e *TVEpisode) ToEpisodeRelease(tvShowName string) *TVEpisodeRelease {
 type MovieRelease struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`
-	ReleaseDate string `json:"release_date"`
+	ReleaseDate string `json:"releaseDate"`
 }
 
 func (m *Movie) ToMovieRelease() *MovieRelease {
@@ -108,19 +108,19 @@ func (m *Movie) ToMovieRelease() *MovieRelease {
 type TVShow struct {
 	ID           int        `json:"id"`
 	Actors       []Person   `json:"actors"`
-	BackdropURL  string     `json:"backdrop_url"`
+	BackdropURL  string     `json:"backdropUrl"`
 	Crew         []Person   `json:"crew"`
 	Genres       []Genre    `json:"genres"`
 	Overview     string     `json:"overview"`
-	PosterURL    string     `json:"poster_url"`
-	ReleaseDate  string     `json:"release_date"`
+	PosterURL    string     `json:"posterUrl"`
+	ReleaseDate  string     `json:"releaseDate"`
 	Networks     []Studio   `json:"networks"`
 	Status       string     `json:"status"`
-	NextEpisode  *TVEpisode `json:"next_episode"`
+	NextEpisode  *TVEpisode `json:"nextEpisode"`
 	Title        string     `json:"title"`
-	SeasonsCount int        `json:"seasons_count"`
-	VoteAverage  float32    `json:"vote_average"`
-	VoteCount    int        `json:"vote_count"`
+	SeasonsCount int        `json:"seasonsCount"`
+	VoteAverage  float32    `json:"voteAverage"`
+	VoteCount    int        `json:"voteCount"`
 }
 
 type PaginatedMovieResults struct {
