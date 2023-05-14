@@ -576,11 +576,16 @@ func (m *mediaClient) GetTVShowRecommendations(tvShowId int) ([]*TVShow, error) 
 	}
 	tvShows := make([]*TVShow, len(recommendations.Results))
 	for i, tvShowRecommendation := range recommendations.Results {
-		tvShow, err := m.GetTVShow(tvShowRecommendation.ID)
-		if err != nil {
-			return nil, err
-		}
-		tvShows[i] = tvShow
+		tvShows[i] = extractTVShowShort(&tmdb.TvShort{
+			ID:           tvShowRecommendation.ID,
+			Name:         tvShowRecommendation.Name,
+			Overview:     tvShowRecommendation.Overview,
+			FirstAirDate: tvShowRecommendation.FirstAirDate,
+			PosterPath:   tvShowRecommendation.PosterPath,
+			BackdropPath: tvShowRecommendation.BackdropPath,
+			VoteAverage:  tvShowRecommendation.VoteAverage,
+			VoteCount:    tvShowRecommendation.VoteCount,
+		})
 	}
 	return tvShows, nil
 }
