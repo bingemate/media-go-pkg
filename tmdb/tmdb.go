@@ -598,11 +598,16 @@ func (m *mediaClient) GetMovieRecommendations(movieId int) ([]*Movie, error) {
 	}
 	movies := make([]*Movie, len(recommendations.Results))
 	for i, movieRecommendation := range recommendations.Results {
-		movie, err := m.GetMovie(movieRecommendation.ID)
-		if err != nil {
-			return nil, err
-		}
-		movies[i] = movie
+		movies[i] = extractMovieShort(&tmdb.MovieShort{
+			ID:           movieRecommendation.ID,
+			Title:        movieRecommendation.Title,
+			Overview:     movieRecommendation.Overview,
+			ReleaseDate:  movieRecommendation.ReleaseDate,
+			PosterPath:   movieRecommendation.PosterPath,
+			BackdropPath: movieRecommendation.BackdropPath,
+			VoteAverage:  movieRecommendation.VoteAverage,
+			VoteCount:    movieRecommendation.VoteCount,
+		})
 	}
 	return movies, nil
 }
