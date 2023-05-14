@@ -150,9 +150,7 @@ type MediaClient interface {
 	GetMoviesByGenre(genreID int, page int) (*PaginatedMovieResults, error)
 	GetTVShowsByGenre(genreID int, page int) (*PaginatedTVShowResults, error)
 	GetMoviesByActor(actorID int, page int) (*PaginatedMovieResults, error)
-	GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error)
 	GetMoviesByDirector(directorID int, page int) (*PaginatedMovieResults, error)
-	GetTVShowsByDirector(directorID int, page int) (*PaginatedTVShowResults, error)
 	GetMoviesByStudio(studioID int, page int) (*PaginatedMovieResults, error)
 	GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error)
 	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisodeRelease, error)
@@ -432,27 +430,6 @@ func (m *mediaClient) GetMoviesByActor(actorID int, page int) (*PaginatedMovieRe
 	}, nil
 }
 
-// GetTVShowsByActor retrieves TV shows starring the given actor and returns a slice of TVShow objects.
-func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error) {
-	//TODO: Test this function, not sure "with_cast" works on TV shows
-	options := extractOptions(m.options)
-	options["page"] = strconv.Itoa(page)
-	options["with_cast"] = strconv.Itoa(actorID)
-	tvShows, err := m.tmdbClient.DiscoverTV(options)
-	if err != nil {
-		return nil, err
-	}
-	var extractedTVShows = make([]*TVShow, len(tvShows.Results))
-	for i, tvShow := range tvShows.Results {
-		extractedTVShows[i] = extractTVShowShort(&tvShow)
-	}
-	return &PaginatedTVShowResults{
-		TotalPage:   tvShows.TotalPages,
-		TotalResult: tvShows.TotalResults,
-		Results:     extractedTVShows,
-	}, nil
-}
-
 // GetMoviesByDirector retrieves movies directed by the given director and returns a slice of Movie objects.
 func (m *mediaClient) GetMoviesByDirector(directorID int, page int) (*PaginatedMovieResults, error) {
 	options := extractOptions(m.options)
@@ -470,27 +447,6 @@ func (m *mediaClient) GetMoviesByDirector(directorID int, page int) (*PaginatedM
 		TotalPage:   movies.TotalPages,
 		TotalResult: movies.TotalResults,
 		Results:     extractedMovies,
-	}, nil
-}
-
-// GetTVShowsByDirector retrieves TV shows directed by the given director and returns a slice of TVShow objects.
-func (m *mediaClient) GetTVShowsByDirector(directorID int, page int) (*PaginatedTVShowResults, error) {
-	//TODO: Test this function, not sure "with_crew" works on TV shows
-	options := extractOptions(m.options)
-	options["page"] = strconv.Itoa(page)
-	options["with_crew"] = strconv.Itoa(directorID)
-	tvShows, err := m.tmdbClient.DiscoverTV(options)
-	if err != nil {
-		return nil, err
-	}
-	var extractedTVShows = make([]*TVShow, len(tvShows.Results))
-	for i, tvShow := range tvShows.Results {
-		extractedTVShows[i] = extractTVShowShort(&tvShow)
-	}
-	return &PaginatedTVShowResults{
-		TotalResult: tvShows.TotalResults,
-		TotalPage:   tvShows.TotalPages,
-		Results:     extractedTVShows,
 	}, nil
 }
 
