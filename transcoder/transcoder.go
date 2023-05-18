@@ -140,14 +140,14 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 	return nil
 }
 
-func ProcessFileTranscode(inputFilePath, fileID, outputFolder, chunkDuration, videoScale string) (TranscodeResponse, error) {
+func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, videoScale string) (TranscodeResponse, error) {
 	start := time.Now()
 	defer func() {
 		log.Println("Temps de transcodage :", time.Since(start))
 	}()
 	log.Println("Début du transcodage du fichier :", inputFilePath)
 
-	outputFileFolder := filepath.Join(outputFolder, fileID)
+	outputFileFolder := filepath.Join(outputFolder, mediaID)
 	if err := prepareOutputFolder(outputFileFolder); err != nil {
 		return TranscodeResponse{}, err
 	}
