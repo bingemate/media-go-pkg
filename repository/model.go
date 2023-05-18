@@ -5,31 +5,13 @@ import (
 )
 
 type (
-	MediaType     string
-	VideoCodec    string
-	AudioCodec    string
-	SubtitleCodec string
+	MediaType string
 )
 
 const (
 	MediaTypeMovie   MediaType = "Movie"
 	MediaTypeTvShow  MediaType = "TvShow"
 	MediaTypeEpisode MediaType = "Episode"
-
-	VideoCodecH264 VideoCodec = "H264"
-	VideoCodecH265 VideoCodec = "H265"
-	VideoCodecHEVC VideoCodec = "HEVC"
-
-	AudioCodecAAC    AudioCodec = "AAC"
-	AudioCodecAC3    AudioCodec = "AC3"
-	AudioCodecEAC3   AudioCodec = "EAC3"
-	AudioCodecMP3    AudioCodec = "MP3"
-	AudioCodecDTS    AudioCodec = "DTS"
-	AudioCodecVorbis AudioCodec = "Vorbis"
-
-	SubtitleCodecSRT    SubtitleCodec = "SRT"
-	SubtitleCodecSUBRIP SubtitleCodec = "SUBRIP"
-	SubtitleCodecASS    SubtitleCodec = "ASS"
 )
 
 type Model struct {
@@ -42,10 +24,7 @@ type Model struct {
 type MediaFile struct {
 	Model
 	Filename  string
-	Size      float64
 	Duration  float64
-	Codec     VideoCodec
-	Mimetype  string
 	Audio     []Audio    `gorm:"foreignKey:MediaFileID;constraint:OnDelete:CASCADE;"`
 	Subtitles []Subtitle `gorm:"foreignKey:MediaFileID;constraint:OnDelete:CASCADE;"`
 }
@@ -93,16 +72,15 @@ type Movie struct {
 
 type Audio struct {
 	Model
-	Codec       AudioCodec
+	Filename    string
 	Language    string
-	Bitrate     float64
 	MediaFileID string    `gorm:"type:uuid;not null"`
 	MediaFile   MediaFile `gorm:"reference:MediaFileID"`
 }
 
 type Subtitle struct {
 	Model
-	Codec       SubtitleCodec
+	Filename    string
 	Language    string
 	MediaFileID string    `gorm:"type:uuid;not null"`
 	MediaFile   MediaFile `gorm:"reference:MediaFileID"`
