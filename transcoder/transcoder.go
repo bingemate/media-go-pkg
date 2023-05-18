@@ -96,8 +96,12 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoScale string) e
 		"-hls_flags", "delete_segments",
 		"-f", "hls", filepath.Join(outputFolder, "index.m3u8"),
 	)
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("failed to execute command: %w", err)
+	}
 	log.Println("Vidéo extraite :", "index.m3u8")
-	return cmd.Run()
+	return nil
 }
 
 func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStreams []string) error {
