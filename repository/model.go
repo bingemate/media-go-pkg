@@ -18,7 +18,7 @@ type Model struct {
 	ID        string `gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	//DeletedAt gorm.DeletedAt `gorm:"index"`
+	// DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
 type MediaFile struct {
@@ -30,9 +30,10 @@ type MediaFile struct {
 }
 
 type Media struct {
-	Model
+	ID          uint       `gorm:"primaryKey"`
+	CreatedAt   time.Time  `gorm:"autoCreateTime"`
+	UpdatedAt   time.Time  `gorm:"autoUpdateTime"`
 	MediaType   MediaType  `gorm:"index"`
-	TmdbID      int        `gorm:"uniqueIndex"`
 	ReleaseDate time.Time  `gorm:"type:date"`
 	TvShows     []TvShow   `gorm:"foreignKey:MediaID;constraint:OnDelete:CASCADE;"`
 	Movies      []Movie    `gorm:"foreignKey:MediaID;constraint:OnDelete:CASCADE;"`
@@ -43,7 +44,7 @@ type Media struct {
 type TvShow struct {
 	Model
 	Name     string
-	MediaID  string    `gorm:"type:uuid;not null"`
+	MediaID  uint      `gorm:"not null"`
 	Media    Media     `gorm:"reference:MediaID"`
 	Episodes []Episode `gorm:"foreignKey:TvShowID;constraint:OnDelete:CASCADE;"`
 }
@@ -53,7 +54,7 @@ type Episode struct {
 	Name        string
 	NbEpisode   int
 	NbSeason    int
-	MediaID     string    `gorm:"type:uuid;not null"`
+	MediaID     uint      `gorm:"not null"`
 	Media       Media     `gorm:"reference:MediaID"`
 	TvShowID    string    `gorm:"type:uuid;not null"`
 	TvShow      TvShow    `gorm:"reference:TvShowID"`
@@ -64,7 +65,7 @@ type Episode struct {
 type Movie struct {
 	Model
 	Name        string
-	MediaID     string    `gorm:"type:uuid;not null"`
+	MediaID     uint      `gorm:"not null"`
 	Media       Media     `gorm:"reference:MediaID"`
 	MediaFileID string    `gorm:"type:uuid;not null"`
 	MediaFile   MediaFile `gorm:"reference:MediaFileID;constraint:OnDelete:CASCADE;"`
@@ -93,7 +94,7 @@ type Category struct {
 }
 
 type CategoryMedia struct {
-	MediaID    string   `gorm:"type:uuid;primaryKey"`
+	MediaID    uint     `gorm:"primaryKey"`
 	Media      Media    `gorm:"reference:MediaID;constraint:OnDelete:CASCADE;"`
 	CategoryID string   `gorm:"type:uuid;primaryKey"`
 	Category   Category `gorm:"reference:CategoryID;constraint:OnDelete:CASCADE;"`
@@ -101,7 +102,7 @@ type CategoryMedia struct {
 
 type Rating struct {
 	UserID  string `gorm:"type:uuid;primaryKey"`
-	MediaID string `gorm:"type:uuid;primaryKey"`
+	MediaID uint   `gorm:"primaryKey"`
 	Media   Media  `gorm:"reference:MediaID;constraint:OnDelete:CASCADE;"`
 	Rating  int
 }
