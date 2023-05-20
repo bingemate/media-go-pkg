@@ -30,11 +30,12 @@ type MediaFile struct {
 }
 
 type Media struct {
-	ID          int        `gorm:"primaryKey"`
-	CreatedAt   time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt   time.Time  `gorm:"autoUpdateTime"`
-	MediaType   MediaType  `gorm:"index"`
-	ReleaseDate time.Time  `gorm:"type:date"`
+	ID          int       `gorm:"primaryKey"`
+	CreatedAt   time.Time `gorm:"autoCreateTime"`
+	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+	MediaType   MediaType `gorm:"index"`
+	ReleaseDate time.Time `gorm:"type:date"`
+	Name        string
 	TvShows     []TvShow   `gorm:"foreignKey:MediaID;constraint:OnDelete:CASCADE;"`
 	Movies      []Movie    `gorm:"foreignKey:MediaID;constraint:OnDelete:CASCADE;"`
 	Episodes    []Episode  `gorm:"foreignKey:MediaID;constraint:OnDelete:CASCADE;"`
