@@ -1,6 +1,7 @@
 package tmdb
 
 import (
+	"fmt"
 	"github.com/ryanbradynd05/go-tmdb"
 	"log"
 	"sort"
@@ -26,6 +27,14 @@ type Person struct {
 	Character  string `json:"character"`
 	Name       string `json:"name"`
 	ProfileURL string `json:"profileUrl"`
+}
+
+// Actor represents a person
+type Actor struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	ProfileURL string `json:"profileUrl"`
+	Overview   string `json:"overview"`
 }
 
 // Studio represents a movie/TV studio with its ID, name, and logo URL.
@@ -157,6 +166,13 @@ type MediaClient interface {
 	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error)
 	GetMovieRecommendations(movieId int) ([]*Movie, error)
 	GetTVShowRecommendations(tvShowId int) ([]*TVShow, error)
+	GetMovieGenre(genreID int) (*Genre, error)
+	GetTVGenre(genreID int) (*Genre, error)
+	GetMovieGenres() ([]*Genre, error)
+	GetTVShowGenres() ([]*Genre, error)
+	GetActor(actorID int) (*Actor, error)
+	GetStudio(studioID int) (*Studio, error)
+	GetNetwork(networkID int) (*Studio, error)
 }
 
 type mediaClient struct {
@@ -588,6 +604,105 @@ func (m *mediaClient) GetTVShowRecommendations(tvShowId int) ([]*TVShow, error) 
 		})
 	}
 	return tvShows, nil
+}
+
+func (m *mediaClient) GetMovieGenre(genreID int) (*Genre, error) {
+	genres, err := m.tmdbClient.GetMovieGenres(m.options)
+	if err != nil {
+		return nil, err
+	}
+	for _, genre := range genres.Genres {
+		if genre.ID == genreID {
+			return &Genre{
+				ID:   genre.ID,
+				Name: genre.Name,
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("movie genre with ID %d not found", genreID)
+}
+
+func (m *mediaClient) GetTVGenre(genreID int) (*Genre, error) {
+	genres, err := m.tmdbClient.GetTvGenres(m.options)
+	if err != nil {
+		return nil, err
+	}
+	for _, genre := range genres.Genres {
+		if genre.ID == genreID {
+			return &Genre{
+				ID:   genre.ID,
+				Name: genre.Name,
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("TV genre with ID %d not found", genreID)
+}
+
+func (m *mediaClient) GetMovieGenres() ([]*Genre, error) {
+	genres, err := m.tmdbClient.GetMovieGenres(m.options)
+	if err != nil {
+		return nil, err
+	}
+	movieGenres := make([]*Genre, len(genres.Genres))
+	for i, genre := range genres.Genres {
+		movieGenres[i] = &Genre{
+			ID:   genre.ID,
+			Name: genre.Name,
+		}
+	}
+	return movieGenres, nil
+}
+
+func (m *mediaClient) GetTVShowGenres() ([]*Genre, error) {
+	genres, err := m.tmdbClient.GetTvGenres(m.options)
+	if err != nil {
+		return nil, err
+	}
+	tvGenres := make([]*Genre, len(genres.Genres))
+	for i, genre := range genres.Genres {
+		tvGenres[i] = &Genre{
+			ID:   genre.ID,
+			Name: genre.Name,
+		}
+	}
+	return tvGenres, nil
+}
+
+func (m *mediaClient) GetActor(actorID int) (*Actor, error) {
+	response, err := m.tmdbClient.GetPersonInfo(actorID, m.options)
+	if err != nil {
+		return nil, err
+	}
+	return &Actor{
+		ID:         response.ID,
+		Name:       response.Name,
+		ProfileURL: profileImgURL(response.ProfilePath),
+		Overview:   response.Biography,
+	}, nil
+}
+
+func (m *mediaClient) GetStudio(studioID int) (*Studio, error) {
+	response, err := m.tmdbClient.GetCompanyInfo(studioID, m.options)
+	if err != nil {
+		return nil, err
+	}
+	return &Studio{
+		ID:      response.ID,
+		Name:    response.Name,
+		LogoURL: profileImgURL(response.LogoPath),
+	}, nil
+}
+
+func (m *mediaClient) GetNetwork(networkID int) (*Studio, error) {
+	response, err := m.tmdbClient.GetNetworkInfo(networkID)
+	if err != nil {
+		return nil, err
+	}
+	return &Studio{
+		ID:      response.ID,
+		Name:    response.Name,
+		LogoURL: profileImgURL(""),
+	}, nil
 }
 
 // extractMovie extracts movie information from a tmdb.Movie object and returns a Movie object.
