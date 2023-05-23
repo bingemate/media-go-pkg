@@ -7,6 +7,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -223,6 +224,14 @@ func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 		return nil, err
 	}
 	return extractTVShow(tvShow, credits), nil
+}
+
+func (m *mediaClient) getTVShowShort(id int) (*TVShow, error) {
+	tvShow, err := m.tmdbClient.GetTvInfo(id, m.options)
+	if err != nil {
+		return nil, err
+	}
+	return extractTVShow(tvShow, nil), nil
 }
 
 // GetTVEpisode retrieves the information of a TV episode by TV show ID, season number and episode number and returns a TVEpisode object.
@@ -455,15 +464,25 @@ func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*PaginatedTVShow
 		return nil, err
 	}
 	var extractedTVShows []*TVShow
+	var arrayLock sync.Mutex
+	var wg sync.WaitGroup
 	var startIndex = math.Min(float64((page-1)*20), float64(len(actorTVCredits.Cast)-1))
 	var endIndex = math.Min(float64(page*20), float64(len(actorTVCredits.Cast)))
 	for _, tvShow := range actorTVCredits.Cast[int(startIndex):int(endIndex)] {
-		tvShow, err := m.GetTVShow(tvShow.ID)
-		if err != nil {
-			return nil, err
-		}
-		extractedTVShows = append(extractedTVShows, tvShow)
+		wg.Add(1)
+		go func(tvShowID int) {
+			defer wg.Done()
+			tvShow, err := m.getTVShowShort(tvShowID)
+			if err != nil {
+				log.Printf("Error while retrieving TV show %d: %s", tvShowID, err)
+				return
+			}
+			arrayLock.Lock()
+			defer arrayLock.Unlock()
+			extractedTVShows = append(extractedTVShows, tvShow)
+		}(tvShow.ID)
 	}
+	wg.Wait()
 
 	return &PaginatedTVShowResults{
 		TotalPage:   int(math.Round(float64(len(actorTVCredits.Cast)) / 20)),
@@ -852,6 +871,9 @@ func extractTVShowResult(tvShow *struct {
 
 // extractMovieActors extracts actors from movie credits and returns a list of Person.
 func extractMovieActors(credits *tmdb.MovieCredits) *[]Person {
+	if credits == nil {
+		return nil
+	}
 	var actors = make([]Person, len(credits.Cast))
 	for i, cast := range credits.Cast {
 		actors[i] = Person{
@@ -866,6 +888,9 @@ func extractMovieActors(credits *tmdb.MovieCredits) *[]Person {
 
 // extractTVActors extracts actors from TV show credits and returns a list of Person.
 func extractTVActors(credits *tmdb.TvCredits) *[]Person {
+	if credits == nil {
+		return nil
+	}
 	var actors = make([]Person, len(credits.Cast))
 	for i, cast := range credits.Cast {
 		actors[i] = Person{
@@ -880,6 +905,9 @@ func extractTVActors(credits *tmdb.TvCredits) *[]Person {
 
 // extractMovieCrew extracts crew from movie credits and returns a list of Person.
 func extractMovieCrew(credits *tmdb.MovieCredits) *[]Person {
+	if credits == nil {
+		return nil
+	}
 	var crew = make([]Person, len(credits.Crew))
 	for i, cast := range credits.Crew {
 		crew[i] = Person{
@@ -894,6 +922,9 @@ func extractMovieCrew(credits *tmdb.MovieCredits) *[]Person {
 
 // extractTVCrew extracts crew from TV show credits and returns a list of Person.
 func extractTVCrew(credits *tmdb.TvCredits) *[]Person {
+	if credits == nil {
+		return nil
+	}
 	var crew = make([]Person, len(credits.Crew))
 	for i, cast := range credits.Crew {
 		crew[i] = Person{
