@@ -161,6 +161,7 @@ type MediaClient interface {
 	GetMoviesByActor(actorID int, page int) (*PaginatedMovieResults, error)
 	GetMoviesByDirector(directorID int, page int) (*PaginatedMovieResults, error)
 	GetMoviesByStudio(studioID int, page int) (*PaginatedMovieResults, error)
+	GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error)
 	GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error)
 	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisodeRelease, error)
 	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error)
@@ -444,6 +445,27 @@ func (m *mediaClient) GetMoviesByActor(actorID int, page int) (*PaginatedMovieRe
 		TotalPage:   movies.TotalPages,
 		TotalResult: movies.TotalResults,
 		Results:     extractedMovies,
+	}, nil
+}
+
+func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error) {
+	actorTVCredits, err := m.tmdbClient.GetPersonTvCredits(actorID, m.options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedTVShows []*TVShow
+	for _, tvShow := range actorTVCredits.Cast[(page-1)*20 : page*20] {
+		tvShow, err := m.GetTVShow(tvShow.ID)
+		if err != nil {
+			return nil, err
+		}
+		extractedTVShows = append(extractedTVShows, tvShow)
+	}
+
+	return &PaginatedTVShowResults{
+		TotalPage:   len(actorTVCredits.Cast) / 20,
+		TotalResult: len(actorTVCredits.Cast),
+		Results:     extractedTVShows,
 	}, nil
 }
 
