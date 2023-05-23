@@ -872,7 +872,7 @@ func extractTVShowResult(tvShow *struct {
 // extractMovieActors extracts actors from movie credits and returns a list of Person.
 func extractMovieActors(credits *tmdb.MovieCredits) *[]Person {
 	if credits == nil {
-		return nil
+		return &[]Person{}
 	}
 	var actors = make([]Person, len(credits.Cast))
 	for i, cast := range credits.Cast {
@@ -889,7 +889,7 @@ func extractMovieActors(credits *tmdb.MovieCredits) *[]Person {
 // extractTVActors extracts actors from TV show credits and returns a list of Person.
 func extractTVActors(credits *tmdb.TvCredits) *[]Person {
 	if credits == nil {
-		return nil
+		return &[]Person{}
 	}
 	var actors = make([]Person, len(credits.Cast))
 	for i, cast := range credits.Cast {
@@ -906,7 +906,7 @@ func extractTVActors(credits *tmdb.TvCredits) *[]Person {
 // extractMovieCrew extracts crew from movie credits and returns a list of Person.
 func extractMovieCrew(credits *tmdb.MovieCredits) *[]Person {
 	if credits == nil {
-		return nil
+		return &[]Person{}
 	}
 	var crew = make([]Person, len(credits.Crew))
 	for i, cast := range credits.Crew {
@@ -923,7 +923,7 @@ func extractMovieCrew(credits *tmdb.MovieCredits) *[]Person {
 // extractTVCrew extracts crew from TV show credits and returns a list of Person.
 func extractTVCrew(credits *tmdb.TvCredits) *[]Person {
 	if credits == nil {
-		return nil
+		return &[]Person{}
 	}
 	var crew = make([]Person, len(credits.Crew))
 	for i, cast := range credits.Crew {
