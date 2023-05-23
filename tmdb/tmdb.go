@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ryanbradynd05/go-tmdb"
 	"log"
+	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -454,7 +455,9 @@ func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*PaginatedTVShow
 		return nil, err
 	}
 	var extractedTVShows []*TVShow
-	for _, tvShow := range actorTVCredits.Cast[(page-1)*20 : page*20] {
+	var startIndex = math.Min(float64((page-1)*20), float64(len(actorTVCredits.Cast)-1))
+	var endIndex = math.Min(float64(page*20), float64(len(actorTVCredits.Cast)))
+	for _, tvShow := range actorTVCredits.Cast[int(startIndex):int(endIndex)] {
 		tvShow, err := m.GetTVShow(tvShow.ID)
 		if err != nil {
 			return nil, err
@@ -463,7 +466,7 @@ func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*PaginatedTVShow
 	}
 
 	return &PaginatedTVShowResults{
-		TotalPage:   len(actorTVCredits.Cast) / 20,
+		TotalPage:   int(math.Round(float64(len(actorTVCredits.Cast)) / 20)),
 		TotalResult: len(actorTVCredits.Cast),
 		Results:     extractedTVShows,
 	}, nil
