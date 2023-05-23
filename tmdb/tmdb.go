@@ -190,6 +190,7 @@ func NewMediaClient(apiKey string) MediaClient {
 		tmdbClient: tmdb.Init(config),
 		options: map[string]string{
 			"language": "fr",
+			"region":   "fr",
 		},
 	}
 }
