@@ -169,6 +169,8 @@ type MediaClient interface {
 	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error)
 	GetMovieRecommendations(movieId int) ([]*Movie, error)
 	GetTVShowRecommendations(tvShowId int) ([]*TVShow, error)
+	GetMovieShort(movieId int) (*Movie, error)
+	GetTVShowShort(tvShowId int) (*TVShow, error)
 	GetMovieGenre(genreID int) (*Genre, error)
 	GetTVGenre(genreID int) (*Genre, error)
 	GetMovieGenres() ([]*Genre, error)
@@ -226,7 +228,17 @@ func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 	return extractTVShow(tvShow, credits), nil
 }
 
-func (m *mediaClient) getTVShowShort(id int) (*TVShow, error) {
+// GetMovieShort retrieves movie info by ID and returns a Movie object.
+func (m *mediaClient) GetMovieShort(id int) (*Movie, error) {
+	movie, err := m.tmdbClient.GetMovieInfo(id, m.options)
+	if err != nil {
+		return nil, err
+	}
+	return extractMovie(movie, nil), nil
+}
+
+// GetTVShowShort retrieves TV show info by ID and returns a TVShow object.
+func (m *mediaClient) GetTVShowShort(id int) (*TVShow, error) {
 	tvShow, err := m.tmdbClient.GetTvInfo(id, m.options)
 	if err != nil {
 		return nil, err
@@ -472,7 +484,7 @@ func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*PaginatedTVShow
 		wg.Add(1)
 		go func(tvShowID, index int) {
 			defer wg.Done()
-			tvShow, err := m.getTVShowShort(tvShowID)
+			tvShow, err := m.GetTVShowShort(tvShowID)
 			if err != nil {
 				log.Printf("Error while retrieving TV show %d: %s", tvShowID, err)
 				return
