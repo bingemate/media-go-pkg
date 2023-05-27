@@ -51,8 +51,6 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 		"-of", "csv=p=0",
 		inputFile,
 	)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("failed to execute command: %w", err)
@@ -110,8 +108,6 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 		)
 	}
 	cmd := exec.Command("ffmpeg", ffmpegArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
@@ -135,8 +131,6 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 			"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
 			outputFile,
 		)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
@@ -154,8 +148,6 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 			"-map", "0:"+stream,
 			outputFile,
 		)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
