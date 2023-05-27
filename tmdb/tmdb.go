@@ -463,24 +463,24 @@ func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*PaginatedTVShow
 	if err != nil {
 		return nil, err
 	}
-	var extractedTVShows []*TVShow
-	var arrayLock sync.Mutex
 	var wg sync.WaitGroup
 	var startIndex = math.Min(float64((page-1)*20), float64(len(actorTVCredits.Cast)-1))
 	var endIndex = math.Min(float64(page*20), float64(len(actorTVCredits.Cast)))
-	for _, tvShow := range actorTVCredits.Cast[int(startIndex):int(endIndex)] {
+	var extractedTVShows = make([]*TVShow, endIndex-startIndex)
+	var lockIndexes = make([]sync.Mutex, endIndex-startIndex)
+	for index, tvShow := range actorTVCredits.Cast[int(startIndex):int(endIndex)] {
 		wg.Add(1)
-		go func(tvShowID int) {
+		go func(tvShowID, index int) {
 			defer wg.Done()
 			tvShow, err := m.getTVShowShort(tvShowID)
 			if err != nil {
 				log.Printf("Error while retrieving TV show %d: %s", tvShowID, err)
 				return
 			}
-			arrayLock.Lock()
-			defer arrayLock.Unlock()
-			extractedTVShows = append(extractedTVShows, tvShow)
-		}(tvShow.ID)
+			lockIndexes[index].Lock()
+			defer lockIndexes[index].Unlock()
+			extractedTVShows[index] = tvShow
+		}(tvShow.ID, index)
 	}
 	wg.Wait()
 
