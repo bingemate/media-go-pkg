@@ -96,9 +96,11 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 
 	if videoCodec == "h264" {
 		// If the original video is h264, copy the codec
+		log.Println("La vidéo est déjà encodée en h264, copie du codec...")
 		ffmpegArgs = append(ffmpegArgs, "-c:v", "copy")
 	} else {
 		// Otherwise, transcode the video
+		log.Println("La vidéo n'est pas encodée en h264, transcodage...")
 		ffmpegArgs = append(ffmpegArgs,
 			"-vf", fmt.Sprintf("scale=%s", videoScale), // rescaling to 720p
 			"-c:v", "libx264",
