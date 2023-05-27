@@ -51,6 +51,8 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 		"-of", "csv=p=0",
 		inputFile,
 	)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("failed to execute command: %w", err)
@@ -79,23 +81,37 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 	return audioStreams, subtitleStreams, videoCodec, nil
 }
 
-func transcodeVideo(inputFile, outputFolder, chunkDuration, videoScale string) error {
+func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoScale string) error {
 	log.Println("Début du transcodage en HLS...")
 	log.Println("Transcodage de la vidéo...")
-	cmd := exec.Command("ffmpeg",
+
+	// Initialize common ffmpeg command arguments
+	ffmpegArgs := []string{
 		"-i", inputFile,
-		"-vf", fmt.Sprintf("scale=%s", videoScale), // rescaling to 720p
 		"-map", "0:0", // Sélectionnez seulement la première piste vidéo
-		"-c:v", "libx264",
-		"-preset", "fast",
-		"-crf", "23",
-		"-pix_fmt", "yuv420p",
 		"-hls_time", chunkDuration,
 		"-hls_playlist_type", "vod",
 		"-hls_segment_filename", filepath.Join(outputFolder, "segment_%03d.ts"),
 		"-hls_flags", "delete_segments",
 		"-f", "hls", filepath.Join(outputFolder, "index.m3u8"),
-	)
+	}
+
+	if videoCodec == "h264" {
+		// If the original video is h264, copy the codec
+		ffmpegArgs = append(ffmpegArgs, "-c:v", "copy")
+	} else {
+		// Otherwise, transcode the video
+		ffmpegArgs = append(ffmpegArgs,
+			"-vf", fmt.Sprintf("scale=%s", videoScale), // rescaling to 720p
+			"-c:v", "libx264",
+			"-preset", "fast",
+			"-crf", "23",
+			"-pix_fmt", "yuv420p",
+		)
+	}
+	cmd := exec.Command("ffmpeg", ffmpegArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
@@ -119,6 +135,8 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 			"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
 			outputFile,
 		)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
@@ -136,6 +154,8 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 			"-map", "0:"+stream,
 			outputFile,
 		)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
@@ -156,13 +176,13 @@ func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, v
 		return TranscodeResponse{}, err
 	}
 
-	audioStreams, subtitleStreams, _, err := extractStreamsInfo(inputFilePath)
+	audioStreams, subtitleStreams, videoCodec, err := extractStreamsInfo(inputFilePath)
 	if err != nil {
 		return TranscodeResponse{}, err
 	}
 
 	beforeTranscode := time.Now()
-	if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoScale); err != nil {
+	if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoCodec, videoScale); err != nil {
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage de la vidéo :", time.Since(beforeTranscode))
