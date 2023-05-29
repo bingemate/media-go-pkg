@@ -102,7 +102,7 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 		// Otherwise, transcode the video
 		log.Println("La vidéo n'est pas encodée en h264, transcodage...")
 		ffmpegArgs = append(ffmpegArgs,
-			"-vf", fmt.Sprintf("scale=%s", videoScale), // rescaling to 720p
+			"-vf", fmt.Sprintf("scale=%s,format=yuv420p", videoScale), // rescaling to 720p
 			"-c:v", "libx264",
 			"-profile:v", "main", // Using the Main profile
 			"-preset", "veryfast",
