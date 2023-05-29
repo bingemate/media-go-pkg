@@ -1,4 +1,4 @@
-package main
+package transcoder
 
 import (
 	"fmt"
@@ -210,7 +210,7 @@ func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, v
 	return response, nil
 }
 
-func main() {
+/*func main() {
 	const (
 		inputFile     = "/home/nospy/Téléchargements/Mashle.S01E07.VOSTFR.1080p.WEBRiP.x265-KAF.mkv"
 		inputFileID   = "123456"
@@ -223,4 +223,4 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(response)
-}
+}*/
