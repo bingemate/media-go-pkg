@@ -5,13 +5,18 @@ import (
 )
 
 type (
-	MediaType string
+	MediaType       string
+	WatchListStatus string
 )
 
 const (
-	MediaTypeMovie   MediaType = "Movie"
-	MediaTypeTvShow  MediaType = "TvShow"
-	MediaTypeEpisode MediaType = "Episode"
+	MediaTypeMovie             MediaType       = "Movie"
+	MediaTypeTvShow            MediaType       = "TvShow"
+	MediaTypeEpisode           MediaType       = "Episode"
+	WatchListStatusPlanToWatch WatchListStatus = "PLAN_TO_WATCH"
+	WatchListStatusWatching    WatchListStatus = "WATCHING"
+	WatchListStatusFinished    WatchListStatus = "FINISHED"
+	WatchListStatusAbandoned   WatchListStatus = "ABANDONED"
 )
 
 type Model struct {
@@ -108,4 +113,14 @@ type Rating struct {
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
 	Media     Media     `gorm:"reference:MediaID;constraint:OnDelete:CASCADE;"`
 	Rating    int
+}
+
+type WatchListItems struct {
+	UserID  string          `gorm:"type:uuid;primaryKey"`
+	MediaID int             `gorm:"primaryKey"`
+	Status  WatchListStatus `gorm:"index"`
+}
+
+func (WatchListItems) TableName() string {
+	return "watch_list_item"
 }

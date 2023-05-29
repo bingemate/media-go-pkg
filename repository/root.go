@@ -16,5 +16,6 @@ func Migrate(db *gorm.DB) error {
 		&Category{},
 		&CategoryMedia{},
 		&Rating{},
+		&WatchListItems{},
 	)
 }
