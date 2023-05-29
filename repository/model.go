@@ -102,8 +102,10 @@ type CategoryMedia struct {
 }
 
 type Rating struct {
-	UserID  string `gorm:"type:uuid;primaryKey"`
-	MediaID int    `gorm:"primaryKey"`
-	Media   Media  `gorm:"reference:MediaID;constraint:OnDelete:CASCADE;"`
-	Rating  int
+	UserID    string    `gorm:"type:uuid;primaryKey"`
+	MediaID   int       `gorm:"primaryKey"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
+	UpdatedAt time.Time `gorm:"autoUpdateTime"`
+	Media     Media     `gorm:"reference:MediaID;constraint:OnDelete:CASCADE;"`
+	Rating    int
 }
