@@ -1,4 +1,4 @@
-package transcoder
+package main
 
 import (
 	"fmt"
@@ -104,12 +104,14 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 		ffmpegArgs = append(ffmpegArgs,
 			"-vf", fmt.Sprintf("scale=%s", videoScale), // rescaling to 720p
 			"-c:v", "libx264",
-			"-preset", "fast",
+			"-profile:v", "main", // Using the Main profile
+			"-preset", "veryfast",
 			"-crf", "23",
 			"-pix_fmt", "yuv420p",
 		)
 	}
 	cmd := exec.Command("ffmpeg", ffmpegArgs...)
+	log.Println("Commande ffmpeg :", cmd.String())
 	err := cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
@@ -210,12 +212,11 @@ func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, v
 	return response, nil
 }
 
-/*
 func main() {
 	const (
-		inputFile     = "/home/nospy/Téléchargements/file.mkv"
+		inputFile     = "/home/nospy/Téléchargements/Mashle.S01E07.VOSTFR.1080p.WEBRiP.x265-KAF.mkv"
 		inputFileID   = "123456"
-		outputFolder  = "/home/nospy/Téléchargements/streaming/"
+		outputFolder  = "/home/nospy/Téléchargements/media/"
 		chunkDuration = "15"       // durée des segments en secondes
 		videoScale    = "1280:720" // dimension de la vidéo
 	)
@@ -225,4 +226,3 @@ func main() {
 	}
 	fmt.Println(response)
 }
-*/
