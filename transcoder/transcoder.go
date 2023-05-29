@@ -87,11 +87,6 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	ffmpegArgs := []string{
 		"-i", inputFile,
 		"-map", "0:0", // Sélectionnez seulement la première piste vidéo
-		"-hls_time", chunkDuration,
-		"-hls_playlist_type", "vod",
-		"-hls_segment_filename", filepath.Join(outputFolder, "segment_%03d.ts"),
-		"-hls_flags", "delete_segments",
-		"-f", "hls", filepath.Join(outputFolder, "index.m3u8"),
 	}
 
 	if videoCodec == "h264" {
@@ -110,6 +105,13 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 			"-pix_fmt", "yuv420p",
 		)
 	}
+	ffmpegArgs = append(ffmpegArgs,
+		"-hls_time", chunkDuration,
+		"-hls_playlist_type", "vod",
+		"-hls_segment_filename", filepath.Join(outputFolder, "segment_%03d.ts"),
+		"-hls_flags", "delete_segments",
+		"-f", "hls", filepath.Join(outputFolder, "index.m3u8"),
+	)
 	cmd := exec.Command("ffmpeg", ffmpegArgs...)
 	log.Println("Commande ffmpeg :", cmd.String())
 	err := cmd.Run()
