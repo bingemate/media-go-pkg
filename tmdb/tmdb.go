@@ -77,27 +77,6 @@ type TVEpisode struct {
 	AirDate       string `json:"airDate"`
 }
 
-// TVEpisodeRelease represents a TV episode release with its attributes such as ID, name, episode
-type TVEpisodeRelease struct {
-	ID            int    `json:"id"`
-	Name          string `json:"name"`
-	EpisodeNumber int    `json:"episodeNumber"`
-	SeasonNumber  int    `json:"seasonNumber"`
-	TVShowName    string `json:"tvShowName"`
-	AirDate       string `json:"airDate"`
-}
-
-func (e *TVEpisode) ToEpisodeRelease(tvShowName string) *TVEpisodeRelease {
-	return &TVEpisodeRelease{
-		ID:            e.ID,
-		Name:          e.Name,
-		EpisodeNumber: e.EpisodeNumber,
-		SeasonNumber:  e.SeasonNumber,
-		TVShowName:    tvShowName,
-		AirDate:       e.AirDate,
-	}
-}
-
 // MovieRelease represents a movie release with its attributes such as ID, title, and release date.
 type MovieRelease struct {
 	ID          int    `json:"id"`
@@ -165,7 +144,7 @@ type MediaClient interface {
 	GetMoviesByStudio(studioID int, page int) (*PaginatedMovieResults, error)
 	GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error)
 	GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error)
-	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisodeRelease, error)
+	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, error)
 	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error)
 	GetMovieRecommendations(movieId int) ([]*Movie, error)
 	GetTVShowRecommendations(tvShowId int) ([]*TVShow, error)
@@ -564,9 +543,9 @@ func (m *mediaClient) GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVS
 }
 
 // GetTVShowsReleases retrieves all TV shows airing between the given dates and returns a slice of TVEpisodeRelease objects.
-func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisodeRelease, error) {
+func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, error) {
 	// Get all episodes for the given TV shows that are airing between the given dates
-	var episodes []*TVEpisodeRelease
+	var episodes []*TVEpisode
 	var lock sync.Mutex
 	var wg sync.WaitGroup
 	for _, tvID := range tvIds {
@@ -588,7 +567,7 @@ func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Ti
 						log.Printf("Error while retrieving TV show %d season %d: %s", tvID, seasonNumber, err)
 						return
 					}
-					var episodesToAdd []*TVEpisodeRelease
+					var episodesToAdd []*TVEpisode
 					for _, episode := range seasonEpisodes {
 						airDate, err := time.Parse("2006-01-02", episode.AirDate)
 						if err != nil {
@@ -599,7 +578,7 @@ func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Ti
 						if (airDate.After(startDate) && airDate.Before(endDate)) ||
 							airDate.Equal(startDate) ||
 							airDate.Equal(endDate) {
-							episodesToAdd = append(episodesToAdd, episode.ToEpisodeRelease(tvShow.Title))
+							episodesToAdd = append(episodesToAdd, episode)
 						}
 					}
 					if len(episodesToAdd) > 0 {
