@@ -567,54 +567,82 @@ func (m *mediaClient) GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVS
 func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisodeRelease, error) {
 	// Get all episodes for the given TV shows that are airing between the given dates
 	var episodes []*TVEpisodeRelease
+	var lock sync.Mutex
+	var wg sync.WaitGroup
 	for _, tvID := range tvIds {
-		tvShow, err := m.GetTVShow(tvID)
-		if err != nil {
-			return nil, err
-		}
-		// Get all episodes for the given TV show that are airing between the given dates
-		for seasonNumber := 1; seasonNumber <= tvShow.SeasonsCount; seasonNumber++ {
-			seasonEpisodes, err := m.GetTVSeasonEpisodes(tvID, seasonNumber)
+		wg.Add(1)
+		go func(tvID int) {
+			defer wg.Done()
+			tvShow, err := m.GetTVShow(tvID)
 			if err != nil {
-				return nil, err
+				log.Printf("Error while retrieving TV show %d: %s", tvID, err)
+				return
 			}
-			for _, episode := range seasonEpisodes {
-				airDate, err := time.Parse("2006-01-02", episode.AirDate)
-				if err != nil {
-					log.Printf("Could not parse air date %s for episode %d of TV show %d",
-						episode.AirDate, episode.ID, tvID)
-					continue
-				}
-				if (airDate.After(startDate) && airDate.Before(endDate)) ||
-					airDate.Equal(startDate) ||
-					airDate.Equal(endDate) {
-					episodes = append(episodes, episode.ToEpisodeRelease(tvShow.Title))
-				}
+			// Get all episodes for the given TV show that are airing between the given dates
+			for seasonNumber := 1; seasonNumber <= tvShow.SeasonsCount; seasonNumber++ {
+				wg.Add(1)
+				go func(tvID, seasonNumber int) {
+					defer wg.Done()
+					seasonEpisodes, err := m.GetTVSeasonEpisodes(tvID, seasonNumber)
+					if err != nil {
+						log.Printf("Error while retrieving TV show %d season %d: %s", tvID, seasonNumber, err)
+						return
+					}
+					var episodesToAdd []*TVEpisodeRelease
+					for _, episode := range seasonEpisodes {
+						airDate, err := time.Parse("2006-01-02", episode.AirDate)
+						if err != nil {
+							log.Printf("Could not parse air date %s for episode %d of TV show %d",
+								episode.AirDate, episode.ID, tvID)
+							continue
+						}
+						if (airDate.After(startDate) && airDate.Before(endDate)) ||
+							airDate.Equal(startDate) ||
+							airDate.Equal(endDate) {
+							episodesToAdd = append(episodesToAdd, episode.ToEpisodeRelease(tvShow.Title))
+						}
+					}
+					if len(episodesToAdd) > 0 {
+						lock.Lock()
+						defer lock.Unlock()
+						episodes = append(episodes, episodesToAdd...)
+					}
+				}(tvID, seasonNumber)
 			}
-		}
+		}(tvID)
 	}
+	wg.Wait()
 	return episodes, nil
 }
 
 // GetMoviesReleases retrieves all movies released between the given dates and returns a slice of MovieRelease objects.
 func (m *mediaClient) GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error) {
 	var movies []*MovieRelease
+	var lock sync.Mutex
+	var wg sync.WaitGroup
 	for _, movieID := range movieIds {
-		movie, err := m.GetMovie(movieID)
-		if err != nil {
-			return nil, err
-		}
-		airDate, err := time.Parse("2006-01-02", movie.ReleaseDate)
-		if err != nil {
-			log.Printf("Could not parse air date %s for movie %d",
-				movie.ReleaseDate, movie.ID)
-			continue
-		}
-		if (airDate.After(startDate) && airDate.Before(endDate)) ||
-			airDate.Equal(startDate) ||
-			airDate.Equal(endDate) {
-			movies = append(movies, movie.ToMovieRelease())
-		}
+		wg.Add(1)
+		go func(movieID int) {
+			defer wg.Done()
+			movie, err := m.GetMovie(movieID)
+			if err != nil {
+				log.Printf("Error while retrieving movie %d: %s", movieID, err)
+				return
+			}
+			airDate, err := time.Parse("2006-01-02", movie.ReleaseDate)
+			if err != nil {
+				log.Printf("Could not parse air date %s for movie %d",
+					movie.ReleaseDate, movie.ID)
+				return
+			}
+			if (airDate.After(startDate) && airDate.Before(endDate)) ||
+				airDate.Equal(startDate) ||
+				airDate.Equal(endDate) {
+				lock.Lock()
+				defer lock.Unlock()
+				movies = append(movies, movie.ToMovieRelease())
+			}
+		}(movieID)
 	}
 	return movies, nil
 }
