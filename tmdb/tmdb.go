@@ -799,7 +799,7 @@ func extractTVEpisode(tvId int, episode *tmdb.TvEpisode) *TVEpisode {
 	return &TVEpisode{
 		ID:            episode.ID,
 		TVShowID:      tvId,
-		PosterURL:     posterImgURL(episode.StillPath),
+		PosterURL:     backdropImgURL(episode.StillPath),
 		EpisodeNumber: episode.EpisodeNumber,
 		SeasonNumber:  episode.SeasonNumber,
 		Name:          episode.Name,
@@ -829,7 +829,7 @@ func extractTVShow(tvShow *tmdb.TV, credits *tmdb.TvCredits) *TVShow {
 			return &TVEpisode{
 				ID:            tvShow.NextEpisodeToAir.ID,
 				TVShowID:      tvShow.ID,
-				PosterURL:     posterImgURL(tvShow.NextEpisodeToAir.StillPath),
+				PosterURL:     backdropImgURL(tvShow.NextEpisodeToAir.StillPath),
 				EpisodeNumber: tvShow.NextEpisodeToAir.EpisodeNumber,
 				SeasonNumber:  tvShow.NextEpisodeToAir.SeasonNumber,
 				Name:          tvShow.NextEpisodeToAir.Name,
