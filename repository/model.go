@@ -111,16 +111,22 @@ type Rating struct {
 	MediaID   int       `gorm:"primaryKey"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
-	Media     Media     `gorm:"reference:MediaID;constraint:OnDelete:CASCADE;"`
 	Rating    int
 }
 
-type WatchListItems struct {
+type Comment struct {
+	Model
+	UserID  string `gorm:"type:uuid;not null"`
+	MediaID int    `gorm:"not null"`
+	Content string
+}
+
+type WatchListItem struct {
 	UserID  string          `gorm:"type:uuid;primaryKey"`
 	MediaID int             `gorm:"primaryKey"`
 	Status  WatchListStatus `gorm:"index"`
 }
 
-func (WatchListItems) TableName() string {
+func (WatchListItem) TableName() string {
 	return "watch_list_item"
 }
