@@ -77,21 +77,6 @@ type TVEpisode struct {
 	AirDate       string `json:"airDate"`
 }
 
-// MovieRelease represents a movie release with its attributes such as ID, title, and release date.
-type MovieRelease struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	ReleaseDate string `json:"releaseDate"`
-}
-
-func (m *Movie) ToMovieRelease() *MovieRelease {
-	return &MovieRelease{
-		ID:          m.ID,
-		Title:       m.Title,
-		ReleaseDate: m.ReleaseDate,
-	}
-}
-
 // TVShow represents a TV show with its attributes such as ID, actors list (Person), backdrop URL,
 // crew list (Person), genre list (Genre), overview, poster URL, release date, studio list (Studio),
 // status, next episode (TVEpisode), title, seasons count, vote average, and vote count.
@@ -145,7 +130,7 @@ type MediaClient interface {
 	GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error)
 	GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error)
 	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, []*TVShow, error)
-	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error)
+	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*Movie, error)
 	GetMovieRecommendations(movieId int) ([]*Movie, error)
 	GetTVShowRecommendations(tvShowId int) ([]*TVShow, error)
 	GetMovieShort(movieId int) (*Movie, error)
@@ -553,7 +538,7 @@ func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Ti
 		wg.Add(1)
 		go func(tvID int) {
 			defer wg.Done()
-			tvShow, err := m.GetTVShow(tvID)
+			tvShow, err := m.GetTVShowShort(tvID)
 			if err != nil {
 				log.Printf("Error while retrieving TV show %d: %s", tvID, err)
 				return
@@ -601,15 +586,15 @@ func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Ti
 }
 
 // GetMoviesReleases retrieves all movies released between the given dates and returns a slice of MovieRelease objects.
-func (m *mediaClient) GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error) {
-	var movies []*MovieRelease
+func (m *mediaClient) GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*Movie, error) {
+	var movies []*Movie
 	var lock sync.Mutex
 	var wg sync.WaitGroup
 	for _, movieID := range movieIds {
 		wg.Add(1)
 		go func(movieID int) {
 			defer wg.Done()
-			movie, err := m.GetMovie(movieID)
+			movie, err := m.GetMovieShort(movieID)
 			if err != nil {
 				log.Printf("Error while retrieving movie %d: %s", movieID, err)
 				return
@@ -625,7 +610,7 @@ func (m *mediaClient) GetMoviesReleases(movieIds []int, startDate, endDate time.
 				airDate.Equal(endDate) {
 				lock.Lock()
 				defer lock.Unlock()
-				movies = append(movies, movie.ToMovieRelease())
+				movies = append(movies, movie)
 			}
 		}(movieID)
 	}
