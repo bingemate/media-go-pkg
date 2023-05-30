@@ -614,6 +614,7 @@ func (m *mediaClient) GetMoviesReleases(movieIds []int, startDate, endDate time.
 			}
 		}(movieID)
 	}
+	wg.Wait()
 	return movies, nil
 }
 
