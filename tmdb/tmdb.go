@@ -144,7 +144,7 @@ type MediaClient interface {
 	GetMoviesByStudio(studioID int, page int) (*PaginatedMovieResults, error)
 	GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error)
 	GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error)
-	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, error)
+	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, []*TVShow, error)
 	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*MovieRelease, error)
 	GetMovieRecommendations(movieId int) ([]*Movie, error)
 	GetTVShowRecommendations(tvShowId int) ([]*TVShow, error)
@@ -543,9 +543,10 @@ func (m *mediaClient) GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVS
 }
 
 // GetTVShowsReleases retrieves all TV shows airing between the given dates and returns a slice of TVEpisodeRelease objects.
-func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, error) {
+func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, []*TVShow, error) {
 	// Get all episodes for the given TV shows that are airing between the given dates
 	var episodes []*TVEpisode
+	var tvShows []*TVShow
 	var lock sync.Mutex
 	var wg sync.WaitGroup
 	for _, tvID := range tvIds {
@@ -558,6 +559,7 @@ func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Ti
 				return
 			}
 			// Get all episodes for the given TV show that are airing between the given dates
+			showAdded := false
 			for seasonNumber := 1; seasonNumber <= tvShow.SeasonsCount; seasonNumber++ {
 				wg.Add(1)
 				go func(tvID, seasonNumber int) {
@@ -585,13 +587,17 @@ func (m *mediaClient) GetTVShowsReleases(tvIds []int, startDate, endDate time.Ti
 						lock.Lock()
 						defer lock.Unlock()
 						episodes = append(episodes, episodesToAdd...)
+						if !showAdded {
+							tvShows = append(tvShows, tvShow)
+							showAdded = true
+						}
 					}
 				}(tvID, seasonNumber)
 			}
 		}(tvID)
 	}
 	wg.Wait()
-	return episodes, nil
+	return episodes, tvShows, nil
 }
 
 // GetMoviesReleases retrieves all movies released between the given dates and returns a slice of MovieRelease objects.
