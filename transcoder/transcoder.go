@@ -79,23 +79,42 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 	return audioStreams, subtitleStreams, videoCodec, nil
 }
 
-func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoScale string) error {
+func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoScale, introFile string) error {
 	log.Println("Début du transcodage en HLS...")
 	log.Println("Transcodage de la vidéo...")
 
+	// Create a temporary file to store the list of input files
+	listFile, err := os.CreateTemp("", "ffmpeg_list_*.txt")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	defer os.Remove(listFile.Name())
+
+	// Write the list of input files to the temporary file
+	listFile.WriteString("file '" + introFile + "'\n")
+	listFile.WriteString("file '" + inputFile + "'\n")
+
+	// Close the temporary file
+	err = listFile.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close temporary file: %w", err)
+	}
+
 	// Initialize common ffmpeg command arguments
 	ffmpegArgs := []string{
-		"-i", inputFile,
-		"-map", "0:0", // Sélectionnez seulement la première piste vidéo
+		"-f", "concat",
+		"-safe", "0",
+		"-i", listFile.Name(),
+		"-map", "0:0",
 	}
 
 	if videoCodec == "h264" {
-		// If the original video is h264, copy the codec
-		log.Println("La vidéo est déjà encodée en h264, copie du codec...")
+		// If the original video is h264, copy the codec for the main video
+		log.Println("La vidéo est déjà encodée en h264, copie du codec pour la vidéo principale...")
 		ffmpegArgs = append(ffmpegArgs, "-c:v", "copy")
 	} else {
-		// Otherwise, transcode the video
-		log.Println("La vidéo n'est pas encodée en h264, transcodage...")
+		// Otherwise, transcode the main video
+		log.Println("La vidéo n'est pas encodée en h264, transcodage de la vidéo principale...")
 		ffmpegArgs = append(ffmpegArgs,
 			"-vf", fmt.Sprintf("scale=%s,format=yuv420p", videoScale), // rescaling to 720p
 			"-c:v", "libx264",
@@ -114,7 +133,7 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	)
 	cmd := exec.Command("ffmpeg", ffmpegArgs...)
 	log.Println("Commande ffmpeg :", cmd.String())
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
@@ -162,7 +181,7 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 	return nil
 }
 
-func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, videoScale string) (TranscodeResponse, error) {
+func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunkDuration, videoScale string) (TranscodeResponse, error) {
 	start := time.Now()
 	log.Println("Début du transcodage du fichier :", inputFilePath)
 
@@ -177,7 +196,7 @@ func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, v
 	}
 
 	beforeTranscode := time.Now()
-	if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoCodec, videoScale); err != nil {
+	if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoCodec, videoScale, introPath); err != nil {
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage de la vidéo :", time.Since(beforeTranscode))
@@ -214,13 +233,14 @@ func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, v
 
 /*func main() {
 	const (
-		inputFile     = "/home/nospy/Téléchargements/Mashle.S01E07.VOSTFR.1080p.WEBRiP.x265-KAF.mkv"
+		introFile     = "/home/nospy/Téléchargements/intro.mkv"
+		inputFile     = "/home/nospy/Téléchargements/video.mkv"
 		inputFileID   = "123456"
 		outputFolder  = "/home/nospy/Téléchargements/media/"
 		chunkDuration = "15"       // durée des segments en secondes
 		videoScale    = "1280:720" // dimension de la vidéo
 	)
-	response, err := ProcessFileTranscode(inputFile, inputFileID, outputFolder, chunkDuration, videoScale)
+	response, err := ProcessFileTranscode(inputFile, introFile, inputFileID, outputFolder, chunkDuration, videoScale)
 	if err != nil {
 		log.Fatal(err)
 	}
