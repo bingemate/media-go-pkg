@@ -203,3 +203,7 @@ type TvShowWatchListItem struct {
 	TvShow   TvShow          `gorm:"reference:TvShowID;constraint:OnDelete:CASCADE;"`
 	Status   WatchListStatus `gorm:"index"`
 }
+
+func (TvShowWatchListItem) TableName() string {
+	return "tv_show_watch_list_item"
+}
