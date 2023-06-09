@@ -62,11 +62,11 @@ type Episode struct {
 	Name        string
 	NbEpisode   int
 	NbSeason    int
-	ReleaseDate time.Time `gorm:"type:date"`
-	TvShowID    int       `gorm:"not null"`
-	TvShow      TvShow    `gorm:"reference:TvShowID"`
-	MediaFileID string    `gorm:"type:uuid"`
-	MediaFile   MediaFile `gorm:"reference:MediaFileID;constraint:OnDelete:SET NULL;"`
+	ReleaseDate time.Time  `gorm:"type:date"`
+	TvShowID    int        `gorm:"not null"`
+	TvShow      TvShow     `gorm:"reference:TvShowID"`
+	MediaFileID string     `gorm:"type:uuid"`
+	MediaFile   *MediaFile `gorm:"reference:MediaFileID;constraint:OnDelete:SET NULL;"`
 }
 
 type Movie struct {
@@ -76,7 +76,7 @@ type Movie struct {
 	Name        string
 	ReleaseDate time.Time      `gorm:"type:date"`
 	MediaFileID string         `gorm:"type:uuid"`
-	MediaFile   MediaFile      `gorm:"reference:MediaFileID;constraint:OnDelete:SET NULL;"`
+	MediaFile   *MediaFile     `gorm:"reference:MediaFileID;constraint:OnDelete:SET NULL;"`
 	Categories  []Category     `gorm:"many2many:category_movie;constraint:OnDelete:CASCADE;"`
 	Ratings     []MovieRating  `gorm:"foreignKey:MovieID;constraint:OnDelete:CASCADE;"`
 	Comments    []MovieComment `gorm:"foreignKey:MovieID;constraint:OnDelete:CASCADE;"`
