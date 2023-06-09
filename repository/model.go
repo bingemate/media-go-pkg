@@ -48,7 +48,7 @@ type TvShow struct {
 	CreatedAt   time.Time `gorm:"autoCreateTime"`
 	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
 	Name        string
-	DateRelease time.Time       `gorm:"type:date"`
+	ReleaseDate time.Time       `gorm:"type:date"`
 	Episodes    []Episode       `gorm:"foreignKey:TvShowID;constraint:OnDelete:CASCADE;"`
 	Categories  []Category      `gorm:"many2many:category_tv_show;constraint:OnDelete:CASCADE;"`
 	Ratings     []TvShowRating  `gorm:"foreignKey:TvShowID;constraint:OnDelete:CASCADE;"`
