@@ -26,7 +26,7 @@ type MediaFile struct {
 	Model
 	Filename  string
 	Duration  float64
-	Audio     []Audio    `gorm:"foreignKey:MediaFileID;constraint:OnDelete:CASCADE;"`
+	Audios    []Audio    `gorm:"foreignKey:MediaFileID;constraint:OnDelete:CASCADE;"`
 	Subtitles []Subtitle `gorm:"foreignKey:MediaFileID;constraint:OnDelete:CASCADE;"`
 }
 
