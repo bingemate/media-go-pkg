@@ -65,7 +65,7 @@ type Episode struct {
 	ReleaseDate time.Time  `gorm:"type:date"`
 	TvShowID    int        `gorm:"not null"`
 	TvShow      TvShow     `gorm:"reference:TvShowID"`
-	MediaFileID string     `gorm:"type:uuid"`
+	MediaFileID *string    `gorm:"type:uuid"`
 	MediaFile   *MediaFile `gorm:"reference:MediaFileID;constraint:OnDelete:SET NULL;"`
 }
 
@@ -75,7 +75,7 @@ type Movie struct {
 	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
 	Name        string
 	ReleaseDate time.Time      `gorm:"type:date"`
-	MediaFileID string         `gorm:"type:uuid"`
+	MediaFileID *string        `gorm:"type:uuid"`
 	MediaFile   *MediaFile     `gorm:"reference:MediaFileID;constraint:OnDelete:SET NULL;"`
 	Categories  []Category     `gorm:"many2many:category_movie;constraint:OnDelete:CASCADE;"`
 	Ratings     []MovieRating  `gorm:"foreignKey:MovieID;constraint:OnDelete:CASCADE;"`
