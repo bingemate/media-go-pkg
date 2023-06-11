@@ -81,21 +81,22 @@ type TVEpisode struct {
 // crew list (Person), genre list (Genre), overview, poster URL, release date, studio list (Studio),
 // status, next episode (TVEpisode), title, seasons count, vote average, and vote count.
 type TVShow struct {
-	ID           int        `json:"id"`
-	Actors       []Person   `json:"actors"`
-	BackdropURL  string     `json:"backdropUrl"`
-	Crew         []Person   `json:"crew"`
-	Genres       []Genre    `json:"genres"`
-	Overview     string     `json:"overview"`
-	PosterURL    string     `json:"posterUrl"`
-	ReleaseDate  string     `json:"releaseDate"`
-	Networks     []Studio   `json:"networks"`
-	Status       string     `json:"status"`
-	NextEpisode  *TVEpisode `json:"nextEpisode"`
-	Title        string     `json:"title"`
-	SeasonsCount int        `json:"seasonsCount"`
-	VoteAverage  float32    `json:"voteAverage"`
-	VoteCount    int        `json:"voteCount"`
+	ID            int        `json:"id"`
+	Actors        []Person   `json:"actors"`
+	BackdropURL   string     `json:"backdropUrl"`
+	Crew          []Person   `json:"crew"`
+	Genres        []Genre    `json:"genres"`
+	Overview      string     `json:"overview"`
+	PosterURL     string     `json:"posterUrl"`
+	ReleaseDate   string     `json:"releaseDate"`
+	Networks      []Studio   `json:"networks"`
+	Status        string     `json:"status"`
+	NextEpisode   *TVEpisode `json:"nextEpisode"`
+	Title         string     `json:"title"`
+	SeasonsCount  int        `json:"seasonsCount"`
+	EpisodesCount int        `json:"episodesCount"`
+	VoteAverage   float32    `json:"voteAverage"`
+	VoteCount     int        `json:"voteCount"`
 }
 
 type PaginatedMovieResults struct {
@@ -185,7 +186,6 @@ func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 		return nil, err
 	}
 	credits, err := m.tmdbClient.GetTvCredits(id, m.options)
-	// TODO https://developers.themoviedb.org/3/getting-started/append-to-response
 	if err != nil {
 		return nil, err
 	}
@@ -837,9 +837,10 @@ func extractTVShow(tvShow *tmdb.TV, credits *tmdb.TvCredits) *TVShow {
 				AirDate:       tvShow.NextEpisodeToAir.AirDate,
 			}
 		}(),
-		SeasonsCount: tvShow.NumberOfSeasons,
-		VoteAverage:  tvShow.VoteAverage,
-		VoteCount:    int(tvShow.VoteCount),
+		SeasonsCount:  tvShow.NumberOfSeasons,
+		EpisodesCount: tvShow.NumberOfEpisodes,
+		VoteAverage:   tvShow.VoteAverage,
+		VoteCount:     int(tvShow.VoteCount),
 	}
 }
 
