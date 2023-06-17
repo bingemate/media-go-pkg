@@ -270,13 +270,13 @@ func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunk
 	log.Println("Temps de transcodage de la vidéo :", time.Since(beforeTranscode))
 
 	beforeAudio := time.Now()
-	if err := extractAudioStreams(inputFilePath, outputFileFolder, chunkDuration, audioStreams); err != nil {
+	if err := extractAudioStreams(inputFilePath, outputFileFolder, chunkDuration, audioStreams, introPath); err != nil {
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage des pistes audio :", time.Since(beforeAudio))
 
 	beforeSubtitle := time.Now()
-	if err := extractSubtitleStreams(inputFilePath, outputFileFolder, subtitleStreams); err != nil {
+	if err := extractSubtitleStreams(inputFilePath, outputFileFolder, subtitleStreams, introPath); err != nil {
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage des pistes de sous-titres :", time.Since(beforeSubtitle))
@@ -301,7 +301,7 @@ func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunk
 	if err := os.Chmod(outputFileFolder, 0777); err != nil {
 		log.Println("Failed to set folder permissions to 777 :", err)
 	}
-	
+
 	return response, nil
 }
 
