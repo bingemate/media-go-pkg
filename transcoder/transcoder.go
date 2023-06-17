@@ -2,10 +2,12 @@ package transcoder
 
 import (
 	"fmt"
+	"github.com/asticode/go-astisub"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -79,23 +81,50 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 	return audioStreams, subtitleStreams, videoCodec, nil
 }
 
-func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoScale string) error {
+func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoScale, introFile string) error {
 	log.Println("Début du transcodage en HLS...")
 	log.Println("Transcodage de la vidéo...")
 
+	// Create a temporary file to store the list of input files
+	listFile, err := os.CreateTemp("", "ffmpeg_list_*.txt")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	defer os.Remove(listFile.Name())
+
+	inputFile = strings.ReplaceAll(inputFile, "'", "'\\''")
+
+	// Write the list of input files to the temporary file
+	_, err = listFile.WriteString("file '" + introFile + "'\n")
+	if err != nil {
+		return err
+	}
+	_, err = listFile.WriteString("file '" + inputFile + "'\n")
+	if err != nil {
+		return err
+	}
+
+	// Close the temporary file
+	err = listFile.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close temporary file: %w", err)
+	}
+
 	// Initialize common ffmpeg command arguments
 	ffmpegArgs := []string{
-		"-i", inputFile,
+		"-f", "concat",
+		"-safe", "0",
+		"-i", listFile.Name(),
 		"-map", "0:v:0", // Sélectionnez seulement la première piste vidéo
 	}
 
 	if videoCodec == "h264" {
-		// If the original video is h264, copy the codec
-		log.Println("La vidéo est déjà encodée en h264, copie du codec...")
+		// If the original video is h264, copy the codec for the main video
+		log.Println("La vidéo est déjà encodée en h264, copie du codec pour la vidéo principale...")
 		ffmpegArgs = append(ffmpegArgs, "-c:v", "copy")
 	} else {
-		// Otherwise, transcode the video
-		log.Println("La vidéo n'est pas encodée en h264, transcodage...")
+		// Otherwise, transcode the main video
+		log.Println("La vidéo n'est pas encodée en h264, transcodage de la vidéo principale...")
 		ffmpegArgs = append(ffmpegArgs,
 			"-vf", fmt.Sprintf("scale=%s,format=yuv420p", videoScale), // rescaling to 720p
 			"-c:v", "libx264",
@@ -114,7 +143,7 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	)
 	cmd := exec.Command("ffmpeg", ffmpegArgs...)
 	log.Println("Commande ffmpeg :", cmd.String())
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
@@ -122,13 +151,16 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	return nil
 }
 
-func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStreams []string) error {
+func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStreams []string, introFile string) error {
 	log.Println("Transcodage des pistes audio...")
+
 	for _, stream := range audioStreams {
 		outputFile := filepath.Join(outputFolder, fmt.Sprintf("audio_%s.m3u8", stream))
 		cmd := exec.Command("ffmpeg",
+			"-i", introFile,
 			"-i", inputFile,
-			"-map", "0:"+stream,
+			"-filter_complex", "[0:a:0][1:"+stream+"]concat=n=2:v=0:a=1[outa]",
+			"-map", "[outa]",
 			"-c:a", "aac",
 			"-b:a", "160k",
 			"-ac", "2",
@@ -137,6 +169,8 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 			"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
 			outputFile,
 		)
+		log.Println("Commande ffmpeg :", cmd.String())
+
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
@@ -145,8 +179,17 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 	return nil
 }
 
-func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []string) error {
+func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []string, introFile string) error {
 	log.Println("Transcodage des pistes de sous-titres...")
+
+	// Obtenir la durée de la vidéo "intro"
+	introDuration, err := getVideoDuration(introFile)
+	if err != nil {
+		return fmt.Errorf("failed to get intro video duration: %w", err)
+	}
+
+	log.Println("Durée de la vidéo d'introduction :", introDuration)
+
 	for _, stream := range subtitleStreams {
 		outputFile := filepath.Join(outputFolder, fmt.Sprintf("subtitle_%s.vtt", stream))
 		cmd := exec.Command("ffmpeg",
@@ -157,12 +200,56 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
+		if err = shiftSubtitleTimecodes(outputFile, introDuration); err != nil {
+			return fmt.Errorf("failed to shift subtitle timestamps: %w", err)
+		}
+
 		log.Println("Piste de sous-titres extraite :", outputFile)
 	}
 	return nil
 }
 
-func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, videoScale string) (TranscodeResponse, error) {
+func getVideoDuration(videoFile string) (time.Duration, error) {
+	cmd := exec.Command("ffprobe",
+		"-v", "error",
+		"-show_entries", "format=duration",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		videoFile,
+	)
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("failed to execute ffprobe command: %w", err)
+	}
+
+	durationSec, err := strconv.ParseFloat(strings.TrimSpace(string(output)), 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse duration value: %w", err)
+	}
+
+	duration := time.Duration(durationSec * float64(time.Second))
+	return duration, nil
+}
+
+func shiftSubtitleTimecodes(subtitleFile string, duration time.Duration) error {
+	// Ouvrir le fichier de sous-titres SRT
+	subs, err := astisub.OpenFile(subtitleFile)
+	if err != nil {
+		return fmt.Errorf("failed to open subtitle file: %w", err)
+	}
+
+	// Décaler les timecodes de la durée de la vidéo d'introduction
+	subs.Add(duration)
+
+	// Enregistrer les modifications dans le fichier SRT
+	err = subs.Write(subtitleFile)
+	if err != nil {
+		return fmt.Errorf("failed to write modified subtitle file: %w", err)
+	}
+
+	return nil
+}
+
+func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunkDuration, videoScale string) (TranscodeResponse, error) {
 	start := time.Now()
 	log.Println("Début du transcodage du fichier :", inputFilePath)
 
@@ -177,19 +264,19 @@ func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, v
 	}
 
 	beforeTranscode := time.Now()
-	if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoCodec, videoScale); err != nil {
+	if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoCodec, videoScale, introPath); err != nil {
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage de la vidéo :", time.Since(beforeTranscode))
 
 	beforeAudio := time.Now()
-	if err := extractAudioStreams(inputFilePath, outputFileFolder, chunkDuration, audioStreams); err != nil {
+	if err := extractAudioStreams(inputFilePath, outputFileFolder, chunkDuration, audioStreams, introPath); err != nil {
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage des pistes audio :", time.Since(beforeAudio))
 
 	beforeSubtitle := time.Now()
-	if err := extractSubtitleStreams(inputFilePath, outputFileFolder, subtitleStreams); err != nil {
+	if err := extractSubtitleStreams(inputFilePath, outputFileFolder, subtitleStreams, introPath); err != nil {
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage des pistes de sous-titres :", time.Since(beforeSubtitle))
@@ -214,19 +301,20 @@ func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, v
 	if err := os.Chmod(outputFileFolder, 0777); err != nil {
 		log.Println("Failed to set folder permissions to 777 :", err)
 	}
-	
+
 	return response, nil
 }
 
 /*func main() {
 	const (
-		inputFile     = "/home/nospy/Téléchargements/Mashle.S01E07.VOSTFR.1080p.WEBRiP.x265-KAF.mkv"
+		introFile     = "/home/nospy/Téléchargements/intro.mkv"
+		inputFile     = "/home/nospy/Téléchargements/video.mkv"
 		inputFileID   = "123456"
 		outputFolder  = "/home/nospy/Téléchargements/media/"
 		chunkDuration = "15"       // durée des segments en secondes
 		videoScale    = "1280:720" // dimension de la vidéo
 	)
-	response, err := ProcessFileTranscode(inputFile, inputFileID, outputFolder, chunkDuration, videoScale)
+	response, err := ProcessFileTranscode(inputFile, introFile, inputFileID, outputFolder, chunkDuration, videoScale)
 	if err != nil {
 		log.Fatal(err)
 	}
