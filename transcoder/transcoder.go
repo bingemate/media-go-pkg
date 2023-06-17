@@ -86,7 +86,7 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	// Initialize common ffmpeg command arguments
 	ffmpegArgs := []string{
 		"-i", inputFile,
-		"-map", "0:0", // Sélectionnez seulement la première piste vidéo
+		"-map", "0:v:0", // Sélectionnez seulement la première piste vidéo
 	}
 
 	if videoCodec == "h264" {
