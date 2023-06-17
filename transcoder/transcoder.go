@@ -90,9 +90,17 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	}
 	defer os.Remove(listFile.Name())
 
+	inputFile = strings.ReplaceAll(inputFile, "'", "'\\''")
+
 	// Write the list of input files to the temporary file
-	listFile.WriteString("file '" + introFile + "'\n")
-	listFile.WriteString("file '" + inputFile + "'\n")
+	_, err = listFile.WriteString("file '" + introFile + "'\n")
+	if err != nil {
+		return err
+	}
+	_, err = listFile.WriteString("file '" + inputFile + "'\n")
+	if err != nil {
+		return err
+	}
 
 	// Close the temporary file
 	err = listFile.Close()
