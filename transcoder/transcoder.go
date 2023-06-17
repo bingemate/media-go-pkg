@@ -209,6 +209,12 @@ func ProcessFileTranscode(inputFilePath, mediaID, outputFolder, chunkDuration, v
 		})
 	}
 	log.Println("Temps de transcodage :", time.Since(start))
+
+	// Set folder permissions to 777
+	if err := os.Chmod(outputFileFolder, 0777); err != nil {
+		log.Println("Failed to set folder permissions to 777 :", err)
+	}
+	
 	return response, nil
 }
 
