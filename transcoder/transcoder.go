@@ -105,7 +105,7 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 		"-f", "concat",
 		"-safe", "0",
 		"-i", listFile.Name(),
-		"-map", "0:0",
+		"-map", "0:v:0", // Sélectionnez seulement la première piste vidéo
 	}
 
 	if videoCodec == "h264" {
@@ -228,6 +228,12 @@ func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunk
 		})
 	}
 	log.Println("Temps de transcodage :", time.Since(start))
+
+	// Set folder permissions to 777
+	if err := os.Chmod(outputFileFolder, 0777); err != nil {
+		log.Println("Failed to set folder permissions to 777 :", err)
+	}
+	
 	return response, nil
 }
 
