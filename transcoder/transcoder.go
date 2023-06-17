@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -149,13 +150,16 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	return nil
 }
 
-func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStreams []string) error {
+func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStreams []string, introFile string) error {
 	log.Println("Transcodage des pistes audio...")
+
 	for _, stream := range audioStreams {
 		outputFile := filepath.Join(outputFolder, fmt.Sprintf("audio_%s.m3u8", stream))
 		cmd := exec.Command("ffmpeg",
+			"-i", introFile,
 			"-i", inputFile,
-			"-map", "0:"+stream,
+			"-filter_complex", "[0:a:0][1:"+stream+"]concat=n=2:v=0:a=1[outa]",
+			"-map", "[outa]",
 			"-c:a", "aac",
 			"-b:a", "160k",
 			"-ac", "2",
@@ -164,6 +168,8 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 			"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
 			outputFile,
 		)
+		log.Println("Commande ffmpeg :", cmd.String())
+
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
