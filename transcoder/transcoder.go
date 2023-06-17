@@ -2,6 +2,7 @@ package transcoder
 
 import (
 	"fmt"
+	"github.com/asticode/go-astisub"
 	"log"
 	"os"
 	"os/exec"
@@ -178,8 +179,17 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 	return nil
 }
 
-func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []string) error {
+func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []string, introFile string) error {
 	log.Println("Transcodage des pistes de sous-titres...")
+
+	// Obtenir la durée de la vidéo "intro"
+	introDuration, err := getVideoDuration(introFile)
+	if err != nil {
+		return fmt.Errorf("failed to get intro video duration: %w", err)
+	}
+
+	log.Println("Durée de la vidéo d'introduction :", introDuration)
+
 	for _, stream := range subtitleStreams {
 		outputFile := filepath.Join(outputFolder, fmt.Sprintf("subtitle_%s.vtt", stream))
 		cmd := exec.Command("ffmpeg",
@@ -190,8 +200,52 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
+		if err = shiftSubtitleTimecodes(outputFile, introDuration); err != nil {
+			return fmt.Errorf("failed to shift subtitle timestamps: %w", err)
+		}
+
 		log.Println("Piste de sous-titres extraite :", outputFile)
 	}
+	return nil
+}
+
+func getVideoDuration(videoFile string) (time.Duration, error) {
+	cmd := exec.Command("ffprobe",
+		"-v", "error",
+		"-show_entries", "format=duration",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		videoFile,
+	)
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("failed to execute ffprobe command: %w", err)
+	}
+
+	durationSec, err := strconv.ParseFloat(strings.TrimSpace(string(output)), 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse duration value: %w", err)
+	}
+
+	duration := time.Duration(durationSec * float64(time.Second))
+	return duration, nil
+}
+
+func shiftSubtitleTimecodes(subtitleFile string, duration time.Duration) error {
+	// Ouvrir le fichier de sous-titres SRT
+	subs, err := astisub.OpenFile(subtitleFile)
+	if err != nil {
+		return fmt.Errorf("failed to open subtitle file: %w", err)
+	}
+
+	// Décaler les timecodes de la durée de la vidéo d'introduction
+	subs.Add(duration)
+
+	// Enregistrer les modifications dans le fichier SRT
+	err = subs.Write(subtitleFile)
+	if err != nil {
+		return fmt.Errorf("failed to write modified subtitle file: %w", err)
+	}
+
 	return nil
 }
 
