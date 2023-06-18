@@ -142,8 +142,8 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 		"-f", "hls", filepath.Join(outputFolder, "index.m3u8"),
 	)
 	cmd := exec.Command("ffmpeg", ffmpegArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
 	log.Println("Commande ffmpeg :", cmd.String())
 	err = cmd.Run()
 	if err != nil {
@@ -171,14 +171,27 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 			"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
 			outputFile,
 		)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		//cmd.Stdout = os.Stdout
+		//cmd.Stderr = os.Stderr
 		log.Println("Commande ffmpeg :", cmd.String())
 
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
 		log.Println("Piste audio extraite :", outputFile)
+	}
+	return nil
+}
+
+func convertSubtitleFormat(inputFile, outputFile string) error {
+	cmd := exec.Command("ffmpeg",
+		"-i", inputFile,
+		outputFile,
+	)
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to convert subtitle format: %w", err)
 	}
 	return nil
 }
@@ -195,22 +208,27 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 	log.Println("Durée de la vidéo d'introduction :", introDuration)
 
 	for _, stream := range subtitleStreams {
-		outputFile := filepath.Join(outputFolder, fmt.Sprintf("subtitle_%s.vtt", stream))
-		cmd := exec.Command("ffmpeg",
-			"-i", inputFile,
-			"-map", "0:"+stream,
-			outputFile,
-		)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to execute command: %w", err)
+		// Convert DVD subtitle to SRT format
+		srtOutputFile := filepath.Join(outputFolder, fmt.Sprintf("subtitle_%s.srt", stream))
+		if err := convertSubtitleFormat(inputFile, srtOutputFile); err != nil {
+			return fmt.Errorf("failed to convert subtitle to SRT: %w", err)
 		}
-		if err = shiftSubtitleTimecodes(outputFile, introDuration); err != nil {
+
+		// Convert SRT subtitle to WebVTT format
+		vttOutputFile := filepath.Join(outputFolder, fmt.Sprintf("subtitle_%s.vtt", stream))
+		if err := convertSubtitleFormat(srtOutputFile, vttOutputFile); err != nil {
+			return fmt.Errorf("failed to convert SRT subtitle to WebVTT: %w", err)
+		}
+
+		if err := os.Remove(srtOutputFile); err != nil {
+			log.Printf("Failed to remove intermediate SRT file: %s\n", srtOutputFile)
+		}
+
+		if err = shiftSubtitleTimecodes(vttOutputFile, introDuration); err != nil {
 			return fmt.Errorf("failed to shift subtitle timestamps: %w", err)
 		}
 
-		log.Println("Piste de sous-titres extraite :", outputFile)
+		log.Println("Piste de sous-titres extraite :", vttOutputFile)
 	}
 	return nil
 }
