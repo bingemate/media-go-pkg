@@ -68,7 +68,9 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 		case "audio":
 			audioStreams = append(audioStreams, streamIndex)
 		case "subtitle":
-			subtitleStreams = append(subtitleStreams, streamIndex)
+			if codecName != "dvdsub" {
+				subtitleStreams = append(subtitleStreams, streamIndex)
+			}
 		case "video":
 			videoCodec = codecName
 		}
