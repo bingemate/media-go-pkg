@@ -182,20 +182,6 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 	}
 	return nil
 }
-
-func convertSubtitleFormat(inputFile, outputFile string) error {
-	cmd := exec.Command("ffmpeg",
-		"-i", inputFile,
-		outputFile,
-	)
-	//cmd.Stdout = os.Stdout
-	//cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to convert subtitle format: %w", err)
-	}
-	return nil
-}
-
 func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []string, introFile string) error {
 	log.Println("Transcodage des pistes de sous-titres...")
 
@@ -210,13 +196,26 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 	for _, stream := range subtitleStreams {
 		// Convert DVD subtitle to SRT format
 		srtOutputFile := filepath.Join(outputFolder, fmt.Sprintf("subtitle_%s.srt", stream))
-		if err := convertSubtitleFormat(inputFile, srtOutputFile); err != nil {
+		srtCmd := exec.Command("ffmpeg",
+			"-i", inputFile,
+			"-map", "0:"+stream,
+			srtOutputFile,
+		)
+		srtCmd.Stdout = os.Stdout
+		srtCmd.Stderr = os.Stderr
+		if err := srtCmd.Run(); err != nil {
 			return fmt.Errorf("failed to convert subtitle to SRT: %w", err)
 		}
 
 		// Convert SRT subtitle to WebVTT format
 		vttOutputFile := filepath.Join(outputFolder, fmt.Sprintf("subtitle_%s.vtt", stream))
-		if err := convertSubtitleFormat(srtOutputFile, vttOutputFile); err != nil {
+		vttCmd := exec.Command("ffmpeg",
+			"-i", srtOutputFile,
+			vttOutputFile,
+		)
+		vttCmd.Stdout = os.Stdout
+		vttCmd.Stderr = os.Stderr
+		if err := vttCmd.Run(); err != nil {
 			return fmt.Errorf("failed to convert SRT subtitle to WebVTT: %w", err)
 		}
 
