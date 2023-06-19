@@ -274,18 +274,21 @@ func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunk
 
 	beforeTranscode := time.Now()
 	if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoCodec, videoScale, introPath); err != nil {
+		os.RemoveAll(outputFileFolder)
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage de la vidéo :", time.Since(beforeTranscode))
 
 	beforeAudio := time.Now()
 	if err := extractAudioStreams(inputFilePath, outputFileFolder, chunkDuration, audioStreams, introPath); err != nil {
+		os.RemoveAll(outputFileFolder)
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage des pistes audio :", time.Since(beforeAudio))
 
 	beforeSubtitle := time.Now()
 	if err := extractSubtitleStreams(inputFilePath, outputFileFolder, subtitleStreams, introPath); err != nil {
+		os.RemoveAll(outputFileFolder)
 		return TranscodeResponse{}, err
 	}
 	log.Println("Temps de transcodage des pistes de sous-titres :", time.Since(beforeSubtitle))
