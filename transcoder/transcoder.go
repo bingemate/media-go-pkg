@@ -210,7 +210,7 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 			return fmt.Errorf("failed to execute command: %w", err)
 		}
 		if err = shiftSubtitleTimecodes(outputFile, introDuration); err != nil {
-			return fmt.Errorf("failed to shift subtitle timestamps: %w", err)
+			log.Printf("failed to shift subtitle timestamps: %v", err)
 		}
 
 		log.Println("Piste de sous-titres extraite :", outputFile)
