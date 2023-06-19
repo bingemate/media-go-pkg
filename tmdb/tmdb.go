@@ -113,40 +113,41 @@ type PaginatedTVShowResults struct {
 
 // MediaClient is an interface for a media client API.
 type MediaClient interface {
+	GetActor(actorID int) (*Actor, error)
 	GetMovie(id int) (*Movie, error)
-	GetTVShow(id int) (*TVShow, error)
-	GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error)
-	GetTVSeasonEpisodes(id int, season int) ([]*TVEpisode, error)
+	GetMovieGenre(genreID int) (*Genre, error)
+	GetMovieGenres() ([]*Genre, error)
+	GetMovieRecommendations(movieId int) ([]*Movie, error)
+	GetMoviesByActor(actorID int, page int) (*PaginatedMovieResults, error)
+	GetMoviesByDirector(directorID int, page int) (*PaginatedMovieResults, error)
+	GetMoviesByGenre(genreID int, page int) (*PaginatedMovieResults, error)
+	GetMoviesByStudio(studioID int, page int) (*PaginatedMovieResults, error)
+	GetMovieShort(movieId int) (*Movie, error)
+	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*Movie, error)
+	GetNetwork(networkID int) (*Studio, error)
 	GetPopularMovies(page int) (*PaginatedMovieResults, error)
 	GetPopularTVShows(page int) (*PaginatedTVShowResults, error)
 	GetRecentMovies() ([]*Movie, error)
 	GetRecentTVShows() ([]*TVShow, error)
+	GetStudio(studioID int) (*Studio, error)
+	GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error)
+	GetTVGenre(genreID int) (*Genre, error)
+	GetTVSeasonEpisodes(id int, season int) ([]*TVEpisode, error)
+	GetTVShow(id int) (*TVShow, error)
+	GetTVShowGenres() ([]*Genre, error)
+	GetTVShowRecommendations(tvShowId int) ([]*TVShow, error)
+	GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error)
+	GetTVShowsByGenre(genreID int, page int) (*PaginatedTVShowResults, error)
+	GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error)
+	GetTVShowShort(tvShowId int) (*TVShow, error)
+	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, []*TVShow, error)
 	SearchMovies(query string, page int) (*PaginatedMovieResults, error)
 	SearchTVShows(query string, page int) (*PaginatedTVShowResults, error)
-	GetMoviesByGenre(genreID int, page int) (*PaginatedMovieResults, error)
-	GetTVShowsByGenre(genreID int, page int) (*PaginatedTVShowResults, error)
-	GetMoviesByActor(actorID int, page int) (*PaginatedMovieResults, error)
-	GetMoviesByDirector(directorID int, page int) (*PaginatedMovieResults, error)
-	GetMoviesByStudio(studioID int, page int) (*PaginatedMovieResults, error)
-	GetTVShowsByActor(actorID int, page int) (*PaginatedTVShowResults, error)
-	GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error)
-	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, []*TVShow, error)
-	GetMoviesReleases(movieIds []int, startDate, endDate time.Time) ([]*Movie, error)
-	GetMovieRecommendations(movieId int) ([]*Movie, error)
-	GetTVShowRecommendations(tvShowId int) ([]*TVShow, error)
-	GetMovieShort(movieId int) (*Movie, error)
-	GetTVShowShort(tvShowId int) (*TVShow, error)
-	GetMovieGenre(genreID int) (*Genre, error)
-	GetTVGenre(genreID int) (*Genre, error)
-	GetMovieGenres() ([]*Genre, error)
-	GetTVShowGenres() ([]*Genre, error)
-	GetActor(actorID int) (*Actor, error)
-	GetStudio(studioID int) (*Studio, error)
-	GetNetwork(networkID int) (*Studio, error)
 }
 
 type mediaClient struct {
 	tmdbClient *tmdb.TMDb
+	cache      *mediaCache
 	options    map[string]string
 }
 
@@ -162,25 +163,38 @@ func NewMediaClient(apiKey string) MediaClient {
 			"language": "fr",
 			"region":   "fr",
 		},
+		cache: newMediaCache(),
 	}
 }
 
 // GetMovie retrieves movie info and credits by ID and returns a Movie object.
 func (m *mediaClient) GetMovie(id int) (*Movie, error) {
+	cachedMovie := m.cache.GetMovie(id)
+	if cachedMovie != nil {
+		return cachedMovie, nil
+	}
+
 	movie, err := m.tmdbClient.GetMovieInfo(id, m.options)
 	if err != nil {
 		return nil, err
 	}
 	credits, err := m.tmdbClient.GetMovieCredits(id, m.options)
-	// TODO https://developers.themoviedb.org/3/getting-started/append-to-response
 	if err != nil {
 		return nil, err
 	}
-	return extractMovie(movie, credits), nil
+	extracted := extractMovie(movie, credits)
+	m.cache.AddMovie(extracted)
+
+	return extracted, nil
 }
 
 // GetTVShow retrieves TV show info and credits by ID and returns a TVShow object.
 func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
+	cachedTVShow := m.cache.GetTVShort(id)
+	if cachedTVShow != nil {
+		return cachedTVShow, nil
+	}
+
 	tvShow, err := m.tmdbClient.GetTvInfo(id, m.options)
 	if err != nil {
 		return nil, err
@@ -189,38 +203,69 @@ func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
 	if err != nil {
 		return nil, err
 	}
-	return extractTVShow(tvShow, credits), nil
+	extracted := extractTVShow(tvShow, credits)
+	m.cache.AddTV(extracted)
+
+	return extracted, nil
 }
 
 // GetMovieShort retrieves movie info by ID and returns a Movie object.
 func (m *mediaClient) GetMovieShort(id int) (*Movie, error) {
+	cachedMovie := m.cache.GetMovieShort(id)
+	if cachedMovie != nil {
+		return cachedMovie, nil
+	}
+
 	movie, err := m.tmdbClient.GetMovieInfo(id, m.options)
 	if err != nil {
 		return nil, err
 	}
-	return extractMovie(movie, nil), nil
+	extracted := extractMovie(movie, nil)
+	m.cache.AddMovieShort(extracted)
+
+	return extracted, nil
 }
 
 // GetTVShowShort retrieves TV show info by ID and returns a TVShow object.
 func (m *mediaClient) GetTVShowShort(id int) (*TVShow, error) {
+	cachedTVShow := m.cache.GetTVShort(id)
+	if cachedTVShow != nil {
+		return cachedTVShow, nil
+	}
 	tvShow, err := m.tmdbClient.GetTvInfo(id, m.options)
 	if err != nil {
 		return nil, err
 	}
-	return extractTVShow(tvShow, nil), nil
+	extracted := extractTVShow(tvShow, nil)
+	m.cache.AddTVShort(extracted)
+
+	return extracted, nil
 }
 
 // GetTVEpisode retrieves the information of a TV episode by TV show ID, season number and episode number and returns a TVEpisode object.
 func (m *mediaClient) GetTVEpisode(tvId, season, episodeNumber int) (*TVEpisode, error) {
+	cachedEpisode := m.cache.GetEpisode(tvId, season, episodeNumber)
+	if cachedEpisode != nil {
+		return cachedEpisode, nil
+	}
+
 	episode, err := m.tmdbClient.GetTvEpisodeInfo(tvId, season, episodeNumber, m.options)
 	if err != nil {
 		return nil, err
 	}
-	return extractTVEpisode(tvId, episode), nil
+	extracted := extractTVEpisode(tvId, episode)
+	m.cache.AddEpisode(extracted)
+
+	return extracted, nil
 }
 
 // GetTVSeasonEpisodes retrieves all episodes from a TV show season and returns a slice of TVEpisode objects.
 func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) ([]*TVEpisode, error) {
+	cachedEpisodes := m.cache.GetSeason(tvId, season)
+	if cachedEpisodes != nil {
+		return cachedEpisodes, nil
+	}
+
 	episodes, err := m.tmdbClient.GetTvSeasonInfo(tvId, season, m.options)
 	if err != nil {
 		return nil, err
@@ -229,6 +274,7 @@ func (m *mediaClient) GetTVSeasonEpisodes(tvId int, season int) ([]*TVEpisode, e
 	for i, episode := range episodes.Episodes {
 		extractedEpisodes[i] = extractTVEpisode(tvId, &episode)
 	}
+	m.cache.AddSeason(tvId, season, extractedEpisodes)
 	return extractedEpisodes, nil
 }
 
@@ -337,6 +383,11 @@ func (m *mediaClient) GetRecentTVShows() ([]*TVShow, error) {
 
 // SearchMovies searches for movies matching the given query and returns a slice of Movie objects.
 func (m *mediaClient) SearchMovies(query string, page int) (*PaginatedMovieResults, error) {
+	cachedResults := m.cache.GetMovieSearchResults(query, page)
+	if cachedResults != nil {
+		return cachedResults, nil
+	}
+
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["region"] = "fr"
@@ -348,15 +399,22 @@ func (m *mediaClient) SearchMovies(query string, page int) (*PaginatedMovieResul
 	for i, movie := range movies.Results {
 		extractedMovies[i] = extractMovieShort(&movie)
 	}
-	return &PaginatedMovieResults{
+	result := &PaginatedMovieResults{
 		TotalPage:   movies.TotalPages,
 		TotalResult: movies.TotalResults,
 		Results:     extractedMovies,
-	}, nil
+	}
+	m.cache.AddMovieSearchResults(query, page, result)
+	return result, nil
 }
 
 // SearchTVShows searches for TV shows matching the given query and returns a slice of TVShow objects.
 func (m *mediaClient) SearchTVShows(query string, page int) (*PaginatedTVShowResults, error) {
+	extractedResults := m.cache.GetTVSearchResults(query, page)
+	if extractedResults != nil {
+		return extractedResults, nil
+	}
+
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	tvShows, err := m.tmdbClient.SearchTv(query, options)
@@ -367,11 +425,13 @@ func (m *mediaClient) SearchTVShows(query string, page int) (*PaginatedTVShowRes
 	for i, tvShow := range tvShows.Results {
 		extractedTVShows[i] = extractTVShowResult(&tvShow)
 	}
-	return &PaginatedTVShowResults{
+	result := &PaginatedTVShowResults{
 		TotalPage:   tvShows.TotalPages,
 		TotalResult: tvShows.TotalResults,
 		Results:     extractedTVShows,
-	}, nil
+	}
+	m.cache.AddTVSearchResults(query, page, result)
+	return result, nil
 }
 
 // GetMoviesByGenre retrieves movies of the given genre and returns a slice of Movie objects.
@@ -663,32 +723,46 @@ func (m *mediaClient) GetTVShowRecommendations(tvShowId int) ([]*TVShow, error) 
 }
 
 func (m *mediaClient) GetMovieGenre(genreID int) (*Genre, error) {
+	cachedGenre := m.cache.GetMovieGenre(genreID)
+	if cachedGenre != nil {
+		return cachedGenre, nil
+	}
+
 	genres, err := m.tmdbClient.GetMovieGenres(m.options)
 	if err != nil {
 		return nil, err
 	}
 	for _, genre := range genres.Genres {
 		if genre.ID == genreID {
-			return &Genre{
+			genre := &Genre{
 				ID:   genre.ID,
 				Name: genre.Name,
-			}, nil
+			}
+			m.cache.AddMovieGenre(genre)
+			return genre, nil
 		}
 	}
 	return nil, fmt.Errorf("movie genre with ID %d not found", genreID)
 }
 
 func (m *mediaClient) GetTVGenre(genreID int) (*Genre, error) {
+	cachedGenre := m.cache.GetTVGenre(genreID)
+	if cachedGenre != nil {
+		return cachedGenre, nil
+	}
+
 	genres, err := m.tmdbClient.GetTvGenres(m.options)
 	if err != nil {
 		return nil, err
 	}
 	for _, genre := range genres.Genres {
 		if genre.ID == genreID {
-			return &Genre{
+			genre := &Genre{
 				ID:   genre.ID,
 				Name: genre.Name,
-			}, nil
+			}
+			m.cache.AddTVGenre(genre)
+			return genre, nil
 		}
 	}
 	return nil, fmt.Errorf("TV genre with ID %d not found", genreID)
@@ -725,16 +799,23 @@ func (m *mediaClient) GetTVShowGenres() ([]*Genre, error) {
 }
 
 func (m *mediaClient) GetActor(actorID int) (*Actor, error) {
+	cachedActor := m.cache.GetActor(actorID)
+	if cachedActor != nil {
+		return cachedActor, nil
+	}
+
 	response, err := m.tmdbClient.GetPersonInfo(actorID, m.options)
 	if err != nil {
 		return nil, err
 	}
-	return &Actor{
+	actor := &Actor{
 		ID:         response.ID,
 		Name:       response.Name,
 		ProfileURL: profileImgURL(response.ProfilePath),
 		Overview:   response.Biography,
-	}, nil
+	}
+	m.cache.AddActor(actor)
+	return actor, nil
 }
 
 func (m *mediaClient) GetStudio(studioID int) (*Studio, error) {
