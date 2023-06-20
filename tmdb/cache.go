@@ -26,6 +26,8 @@ type mediaCache interface {
 	GetSeason(tvID int, seasonNumber int) []*TVEpisode
 	AddMovieSearchResults(query string, page int, results *PaginatedMovieResults)
 	GetMovieSearchResults(query string, page int) *PaginatedMovieResults
+	GetMovieSearchResultsYear(query string, page int, year string) *PaginatedMovieResults
+	AddMovieSearchResultsYear(query string, page int, year string, results *PaginatedMovieResults)
 	AddTVSearchResults(query string, page int, results *PaginatedTVShowResults)
 	GetTVSearchResults(query string, page int) *PaginatedTVShowResults
 	AddMovieGenre(genre *Genre)
@@ -131,6 +133,18 @@ func (c *inMemoryMediaCache) GetMovieSearchResults(query string, page int) *Pagi
 	return r.(*PaginatedMovieResults)
 }
 
+func (c *inMemoryMediaCache) GetMovieSearchResultsYear(query string, page int, year string) *PaginatedMovieResults {
+	r, ok := c.cache.Get("movie_search:" + query + ":" + strconv.Itoa(page) + ":" + year)
+	if !ok {
+		return nil
+	}
+	return r.(*PaginatedMovieResults)
+}
+
+func (c *inMemoryMediaCache) AddMovieSearchResultsYear(query string, page int, year string, results *PaginatedMovieResults) {
+	c.cache.SetDefault("movie_search:"+query+":"+strconv.Itoa(page)+":"+year, results)
+}
+
 func (c *inMemoryMediaCache) AddTVSearchResults(query string, page int, results *PaginatedTVShowResults) {
 	c.cache.SetDefault("tv_search:"+query+":"+strconv.Itoa(page), results)
 }
@@ -183,7 +197,7 @@ type redisMediaCache struct {
 	client *redis.Client
 }
 
-func newRedisMediaCache(redisURL string, redisPassword string) *redisMediaCache {
+func newRedisMediaCache(redisURL string, redisPassword string) mediaCache {
 	client := redis.NewClient(&redis.Options{
 		Addr:     redisURL,
 		Password: redisPassword,
@@ -409,6 +423,31 @@ func (r redisMediaCache) GetMovieSearchResults(query string, page int) *Paginate
 		return nil
 	}
 	return &results
+}
+
+func (r redisMediaCache) GetMovieSearchResultsYear(query string, page int, year string) *PaginatedMovieResults {
+	key := "movie_search:" + query + ":" + strconv.Itoa(page) + ":" + year
+	data, err := r.client.Get(key).Bytes()
+	if err != nil {
+		return nil
+	}
+	var results PaginatedMovieResults
+	err = json.Unmarshal(data, &results)
+	if err != nil {
+		log.Println("Error while unmarshalling movie search results", err)
+		return nil
+	}
+	return &results
+}
+
+func (r redisMediaCache) AddMovieSearchResultsYear(query string, page int, year string, results *PaginatedMovieResults) {
+	key := "movie_search:" + query + ":" + strconv.Itoa(page) + ":" + year
+	data, err := json.Marshal(results)
+	if err != nil {
+		log.Println("Error while marshalling movie search results", err)
+		return
+	}
+	r.client.Set(key, data, oneWeekExpiration)
 }
 
 func (r redisMediaCache) AddTVSearchResults(query string, page int, results *PaginatedTVShowResults) {

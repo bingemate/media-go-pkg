@@ -142,6 +142,7 @@ type MediaClient interface {
 	GetTVShowShort(tvShowId int) (*TVShow, error)
 	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, []*TVShow, error)
 	SearchMovies(query string, page int) (*PaginatedMovieResults, error)
+	SearchMoviesYear(query string, year string, page int) (*PaginatedMovieResults, error)
 	SearchTVShows(query string, page int) (*PaginatedTVShowResults, error)
 }
 
@@ -421,6 +422,34 @@ func (m *mediaClient) SearchMovies(query string, page int) (*PaginatedMovieResul
 		Results:     extractedMovies,
 	}
 	m.cache.AddMovieSearchResults(query, page, result)
+	return result, nil
+}
+
+// SearchMoviesYear searches for movies matching the given query and year and returns a slice of Movie objects.
+func (m *mediaClient) SearchMoviesYear(query string, year string, page int) (*PaginatedMovieResults, error) {
+	cachedResults := m.cache.GetMovieSearchResultsYear(query, page, year)
+	if cachedResults != nil {
+		return cachedResults, nil
+	}
+
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	options["region"] = "fr"
+	options["year"] = year
+	movies, err := m.tmdbClient.SearchMovie(query, options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedMovies = make([]*Movie, len(movies.Results))
+	for i, movie := range movies.Results {
+		extractedMovies[i] = extractMovieShort(&movie)
+	}
+	result := &PaginatedMovieResults{
+		TotalPage:   movies.TotalPages,
+		TotalResult: movies.TotalResults,
+		Results:     extractedMovies,
+	}
+	m.cache.AddMovieSearchResultsYear(query, page, year, result)
 	return result, nil
 }
 
