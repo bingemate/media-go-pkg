@@ -206,7 +206,7 @@ func (m *mediaClient) GetMovie(id int) (*Movie, error) {
 
 // GetTVShow retrieves TV show info and credits by ID and returns a TVShow object.
 func (m *mediaClient) GetTVShow(id int) (*TVShow, error) {
-	cachedTVShow := m.cache.GetTVShort(id)
+	cachedTVShow := m.cache.GetTV(id)
 	if cachedTVShow != nil {
 		return cachedTVShow, nil
 	}
