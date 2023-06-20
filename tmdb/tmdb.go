@@ -147,7 +147,7 @@ type MediaClient interface {
 
 type mediaClient struct {
 	tmdbClient *tmdb.TMDb
-	cache      *mediaCache
+	cache      mediaCache
 	options    map[string]string
 }
 
@@ -163,7 +163,23 @@ func NewMediaClient(apiKey string) MediaClient {
 			"language": "fr",
 			"region":   "fr",
 		},
-		cache: newMediaCache(),
+		cache: newInMemoryMediaCache(),
+	}
+}
+
+func NewRedisMediaClient(apiKey, redisHost, redisPass string) MediaClient {
+	config := tmdb.Config{
+		APIKey:   apiKey,
+		Proxies:  nil,
+		UseProxy: false,
+	}
+	return &mediaClient{
+		tmdbClient: tmdb.Init(config),
+		options: map[string]string{
+			"language": "fr",
+			"region":   "fr",
+		},
+		cache: newRedisMediaCache(redisHost, redisPass),
 	}
 }
 
