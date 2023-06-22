@@ -69,7 +69,7 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 			audioStreams = append(audioStreams, streamIndex)
 		case "subtitle":
 			log.Println("Piste de sous-titres trouvée :", streamIndex, codecName)
-			if codecName != "dvdsub" && codecName != "dvd_subtitle" {
+			if codecName != "dvd_subtitle" && codecName != "hdmv_pgs_subtitle" {
 				subtitleStreams = append(subtitleStreams, streamIndex)
 			}
 		case "video":
