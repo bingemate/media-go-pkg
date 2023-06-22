@@ -1,4 +1,4 @@
-package features
+package object_storage
 
 import (
 	"fmt"
