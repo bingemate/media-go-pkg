@@ -14,7 +14,7 @@ import (
 
 type ObjectStorage interface {
 	UploadMediaFiles(prefix, localPath string) error
-	DeleteDirectoryFromS3(client *s3.S3, prefix string) error
+	DeleteMediaFiles(prefix string) error
 }
 
 type objectStorage struct {
@@ -44,7 +44,7 @@ func NewObjectStorage(accessKey, secretKey, endpoint, region, bucket string) (Ob
 func (o *objectStorage) UploadMediaFiles(prefix, localPath string) error {
 	client := s3.New(o.sess)
 	log.Println("Removing existing files on the bucket on path", prefix)
-	err := o.DeleteDirectoryFromS3(client, prefix)
+	err := o.deleteDirectoryFromS3(client, prefix)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,18 @@ func (o *objectStorage) UploadMediaFiles(prefix, localPath string) error {
 	return nil
 }
 
-func (o *objectStorage) DeleteDirectoryFromS3(client *s3.S3, prefix string) error {
+func (o *objectStorage) DeleteMediaFiles(prefix string) error {
+	client := s3.New(o.sess)
+	log.Println("Removing existing files on the bucket on path", prefix)
+	err := o.deleteDirectoryFromS3(client, prefix)
+	if err != nil {
+		return err
+	}
+	log.Println("Files removed successfully")
+	return nil
+}
+
+func (o *objectStorage) deleteDirectoryFromS3(client *s3.S3, prefix string) error {
 	var continuationToken *string
 
 	for {
