@@ -14,7 +14,7 @@ import (
 
 type ObjectStorage interface {
 	UploadMediaFiles(prefix, localPath string) error
-	UploadDirectoryToS3(client *s3.S3, prefix, localPath string) error
+	DeleteDirectoryFromS3(client *s3.S3, prefix string) error
 }
 
 type objectStorage struct {
@@ -44,12 +44,12 @@ func NewObjectStorage(accessKey, secretKey, endpoint, region, bucket string) (Ob
 func (o *objectStorage) UploadMediaFiles(prefix, localPath string) error {
 	client := s3.New(o.sess)
 	log.Println("Removing existing files on the bucket on path", prefix)
-	err := o.deleteDirectoryFromS3(client, prefix)
+	err := o.DeleteDirectoryFromS3(client, prefix)
 	if err != nil {
 		return err
 	}
 	log.Println("Uploading files to the bucket on path", prefix)
-	err = o.UploadDirectoryToS3(client, prefix, localPath)
+	err = o.uploadDirectoryToS3(client, prefix, localPath)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (o *objectStorage) UploadMediaFiles(prefix, localPath string) error {
 	return nil
 }
 
-func (o *objectStorage) deleteDirectoryFromS3(client *s3.S3, prefix string) error {
+func (o *objectStorage) DeleteDirectoryFromS3(client *s3.S3, prefix string) error {
 	var continuationToken *string
 
 	for {
@@ -146,7 +146,7 @@ func (o *objectStorage) uploadFileToS3(client *s3.S3, prefix, filePath string, w
 	}
 }
 
-func (o *objectStorage) UploadDirectoryToS3(client *s3.S3, prefix, localPath string) error {
+func (o *objectStorage) uploadDirectoryToS3(client *s3.S3, prefix, localPath string) error {
 	var wg sync.WaitGroup
 	sem := make(chan bool, 4) // limit to 4 concurrent goroutines
 	log.Println("Uploading files from", localPath, "to", prefix)
