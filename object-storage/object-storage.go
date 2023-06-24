@@ -165,7 +165,7 @@ func (o *objectStorage) uploadFileToS3(client *s3.S3, prefix, filePath string, w
 			log.Printf("Failed to upload %s to bucket %s, error: %s\nRetrying...", key, o.bucket, err.Error())
 			time.Sleep(1 * time.Second) // wait for 1 second before next attempt
 		} else {
-			log.Printf("File %s uploaded successfully", key)
+			//log.Printf("File %s uploaded successfully", key)
 			success = true
 			break
 		}
