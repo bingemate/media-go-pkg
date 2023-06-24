@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 type ObjectStorage interface {
@@ -67,7 +68,6 @@ func (o *objectStorage) DeleteMediaFiles(prefix string) error {
 	log.Println("Files removed successfully")
 	return nil
 }
-
 func (o *objectStorage) deleteDirectoryFromS3(client *s3.S3, prefix string) error {
 	var continuationToken *string
 
@@ -114,19 +114,26 @@ func (o *objectStorage) listObjectsForDeletion(client *s3.S3, prefix string, con
 }
 
 func (o *objectStorage) deleteObjects(client *s3.S3, objects []*s3.ObjectIdentifier) error {
-	_, err := client.DeleteObjects(&s3.DeleteObjectsInput{
-		Bucket: aws.String(o.bucket),
-		Delete: &s3.Delete{
-			Objects: objects,
-			Quiet:   aws.Bool(true),
-		},
-	})
-	if err != nil {
-		log.Println("Error while removing objects")
-		return err
+	var err error
+	for i := 0; i < 3; i++ {
+		_, err = client.DeleteObjects(&s3.DeleteObjectsInput{
+			Bucket: aws.String(o.bucket),
+			Delete: &s3.Delete{
+				Objects: objects,
+				Quiet:   aws.Bool(true),
+			},
+		})
+
+		if err != nil {
+			log.Printf("Error while removing objects, error: %s\nRetrying...", err.Error())
+			time.Sleep(1 * time.Second) // wait for 1 second before next attempt
+		} else {
+			return nil
+		}
 	}
 
-	return nil
+	log.Println("Failed to delete objects after 3 attempts")
+	return err
 }
 
 func (o *objectStorage) uploadFileToS3(client *s3.S3, prefix, filePath string, wg *sync.WaitGroup, sem chan bool) {
@@ -145,15 +152,27 @@ func (o *objectStorage) uploadFileToS3(client *s3.S3, prefix, filePath string, w
 	_, filename := filepath.Split(filePath)
 	key := filepath.Join(prefix, filename)
 
-	_, err = client.PutObject(&s3.PutObjectInput{
-		Bucket: aws.String(o.bucket),
-		Key:    aws.String(key),
-		ACL:    aws.String("public-read"),
-		Body:   file,
-	})
+	var success bool
+	for i := 0; i < 3; i++ {
+		_, err = client.PutObject(&s3.PutObjectInput{
+			Bucket: aws.String(o.bucket),
+			Key:    aws.String(key),
+			ACL:    aws.String("public-read"),
+			Body:   file,
+		})
 
-	if err != nil {
-		log.Printf("Failed to upload %s to bucket %s, error: %s", key, o.bucket, err.Error())
+		if err != nil {
+			log.Printf("Failed to upload %s to bucket %s, error: %s\nRetrying...", key, o.bucket, err.Error())
+			time.Sleep(1 * time.Second) // wait for 1 second before next attempt
+		} else {
+			log.Printf("File %s uploaded successfully", key)
+			success = true
+			break
+		}
+	}
+
+	if !success {
+		log.Printf("Failed to upload %s to bucket %s after 3 attempts", key, o.bucket)
 	}
 }
 
