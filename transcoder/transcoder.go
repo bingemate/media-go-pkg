@@ -341,11 +341,11 @@ func ProcessFileTranscode(inputFilePath, introPath, intro219Path, mediaID, outpu
 /*func main() {
 	const (
 		introFile     = "/home/nospy/Projets/bingemate/media-indexer/assets/intro.mkv"
-		introFile219  = "/home/nospy/Projets/bingemate/media-indexer/assets/intro_21-9.mp4"
-		inputFile     = "/media/nospy/Data/Encodage/Encoded/Star Wars - Episode IV - A New Hope - 1977.mkv"
+		introFile219  = "/home/nospy/Projets/bingemate/media-indexer/assets/intro_21-9.mkv"
+		inputFile     = "/home/nospy/Téléchargements/movies-source/Batman - Le Defi - 1992.mkv"
 		inputFileID   = "123456"
 		outputFolder  = "/home/nospy/Téléchargements/media/"
-		chunkDuration = "15"       // durée des segments en secondes
+		chunkDuration = "10"       // durée des segments en secondes
 		videoScale    = "1280:720" // dimension de la vidéo
 		videoScale219 = "1920:816" // dimension de la vidéo
 	)
