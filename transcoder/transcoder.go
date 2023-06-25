@@ -73,6 +73,9 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 				subtitleStreams = append(subtitleStreams, streamIndex)
 			}
 		case "video":
+			if videoCodec != "" {
+				continue
+			}
 			videoCodec = codecName
 			aspectRatio = fields[3]
 		}
