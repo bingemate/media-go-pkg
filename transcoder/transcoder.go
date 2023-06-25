@@ -101,7 +101,7 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoScale, introFil
 		"-c:v", "libx264",
 		"-profile:v", "high", // Using the Main profile
 		"-preset", "ultrafast",
-		"-crf", "22",
+		"-crf", "25",
 		"-pix_fmt", "yuv420p",
 		"-hls_time", chunkDuration,
 		"-hls_playlist_type", "vod",
