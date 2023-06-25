@@ -349,14 +349,16 @@ func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunk
 
 /*func main() {
 	const (
-		introFile     = "/home/nospy/Téléchargements/intro.mkv"
-		inputFile     = "/home/nospy/Téléchargements/video.mkv"
+		introFile     = "/home/nospy/Projets/bingemate/media-indexer/assets/intro.mkv"
+		introFile219  = "/home/nospy/Projets/bingemate/media-indexer/assets/intro_21-9.mp4"
+		inputFile     = "/media/nospy/Data/Encodage/Encoded/Star Wars - Episode IV - A New Hope - 1977.mkv"
 		inputFileID   = "123456"
 		outputFolder  = "/home/nospy/Téléchargements/media/"
 		chunkDuration = "15"       // durée des segments en secondes
 		videoScale    = "1280:720" // dimension de la vidéo
+		videoScale219 = "1920:816" // dimension de la vidéo
 	)
-	response, err := ProcessFileTranscode(inputFile, introFile, inputFileID, outputFolder, chunkDuration, videoScale)
+	response, err := ProcessFileTranscode(inputFile, introFile, introFile219, inputFileID, outputFolder, chunkDuration, videoScale, videoScale219)
 	if err != nil {
 		log.Fatal(err)
 	}
