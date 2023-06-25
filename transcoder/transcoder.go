@@ -131,7 +131,7 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 		ffmpegArgs = append(ffmpegArgs,
 			"-vf", fmt.Sprintf("scale=%s,format=yuv420p", videoScale), // rescaling to 720p
 			"-c:v", "libx264",
-			"-profile:v", "main", // Using the Main profile
+			"-profile:v", "high", // Using the Main profile
 			"-preset", "veryfast",
 			"-crf", "23",
 			"-pix_fmt", "yuv420p",
@@ -150,6 +150,9 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	log.Println("Commande ffmpeg :", cmd.String())
 	err = cmd.Run()
 	if err != nil {
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		err = cmd.Run()
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 	log.Println("Vidéo extraite :", "index.m3u8")
@@ -179,7 +182,12 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 		log.Println("Commande ffmpeg :", cmd.String())
 
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to execute command: %w", err)
+			if err != nil {
+				cmd.Stderr = os.Stderr
+				cmd.Stdout = os.Stdout
+				err = cmd.Run()
+				return fmt.Errorf("failed to execute command: %w", err)
+			}
 		}
 		log.Println("Piste audio extraite :", outputFile)
 	}
@@ -207,7 +215,12 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 		//cmd.Stdout = os.Stdout
 		//cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to execute command: %w", err)
+			if err != nil {
+				cmd.Stderr = os.Stderr
+				cmd.Stdout = os.Stdout
+				err = cmd.Run()
+				return fmt.Errorf("failed to execute command: %w", err)
+			}
 		}
 		if err = shiftSubtitleTimecodes(outputFile, introDuration); err != nil {
 			log.Printf("failed to shift subtitle timestamps: %v", err)
