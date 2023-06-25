@@ -1,4 +1,4 @@
-package main
+package transcoder
 
 import (
 	"fmt"
@@ -88,34 +88,55 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	log.Println("Début du transcodage en HLS...")
 	log.Println("Transcodage de la vidéo...")
 
+	// Create a temporary file to store the list of input files
+	listFile, err := os.CreateTemp("", "ffmpeg_list_*.txt")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	defer os.Remove(listFile.Name())
+
+	inputFile = strings.ReplaceAll(inputFile, "'", "'\\''")
+
+	// Write the list of input files to the temporary file
+	_, err = listFile.WriteString("file '" + introFile + "'\n")
+	if err != nil {
+		return err
+	}
+	_, err = listFile.WriteString("file '" + inputFile + "'\n")
+	if err != nil {
+		return err
+	}
+
+	// Close the temporary file
+	err = listFile.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close temporary file: %w", err)
+	}
+
 	// Initialize common ffmpeg command arguments
 	ffmpegArgs := []string{
-		"-i", introFile,
-		"-i", inputFile,
+		"-f", "concat",
+		"-safe", "0",
+		"-i", listFile.Name(),
+		"-map", "0:v:0", // Sélectionnez seulement la première piste vidéo
 	}
 
 	if videoCodec == "h264" {
 		// If the original video is h264, copy the codec for the main video
 		log.Println("La vidéo est déjà encodée en h264, copie du codec pour la vidéo principale...")
-		ffmpegArgs = append(ffmpegArgs,
-			"-filter_complex", fmt.Sprintf("[0:v:0]setsar=sar=1/1[v0]; [1:v:0]setsar=sar=1/1[v1]; [v0][v1]concat=n=2:v=1[outv]"),
-			"-map", "[outv]",
-			"-c:v", "copy",
-		)
+		ffmpegArgs = append(ffmpegArgs, "-c:v", "copy")
 	} else {
 		// Otherwise, transcode the main video
 		log.Println("La vidéo n'est pas encodée en h264, transcodage de la vidéo principale...")
 		ffmpegArgs = append(ffmpegArgs,
-			"-filter_complex", fmt.Sprintf("[0:v:0]scale=%s,format=yuv420p,setsar=sar=1/1[v0]; [1:v:0]scale=%s,format=yuv420p,setsar=sar=1/1[v1]; [v0][v1]concat=n=2:v=1[outv]", videoScale, videoScale),
-			"-map", "[outv]",
+			"-vf", fmt.Sprintf("scale=%s,format=yuv420p", videoScale), // rescaling to 720p
 			"-c:v", "libx264",
-			"-profile:v", "high", // Using the High profile
+			"-profile:v", "high", // Using the Main profile
 			"-preset", "veryfast",
 			"-crf", "23",
 			"-pix_fmt", "yuv420p",
 		)
 	}
-
 	ffmpegArgs = append(ffmpegArgs,
 		"-hls_time", chunkDuration,
 		"-hls_playlist_type", "vod",
@@ -123,16 +144,15 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 		"-hls_flags", "delete_segments",
 		"-f", "hls", filepath.Join(outputFolder, "index.m3u8"),
 	)
-
 	cmd := exec.Command("ffmpeg", ffmpegArgs...)
 	//cmd.Stdout = os.Stdout
 	//cmd.Stderr = os.Stderr
 	log.Println("Commande ffmpeg :", cmd.String())
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		cmd = exec.Command("ffmpeg", ffmpegArgs...)
-		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
 		err = cmd.Run()
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
@@ -327,12 +347,12 @@ func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunk
 	return response, nil
 }
 
-func main() {
+/*func main() {
 	const (
-		introFile     = "/home/nospy/Projets/bingemate/media-indexer/assets/intro.mkv"
-		inputFile     = "/media/nospy/Data/Encodage/Encoded/Batman & Robin - 1997.mkv"
+		introFile     = "/home/nospy/Téléchargements/intro.mkv"
+		inputFile     = "/home/nospy/Téléchargements/video.mkv"
 		inputFileID   = "123456"
-		outputFolder  = "/home/nospy/Téléchargements/media-target/"
+		outputFolder  = "/home/nospy/Téléchargements/media/"
 		chunkDuration = "15"       // durée des segments en secondes
 		videoScale    = "1280:720" // dimension de la vidéo
 	)
@@ -341,4 +361,4 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(response)
-}
+}*/
