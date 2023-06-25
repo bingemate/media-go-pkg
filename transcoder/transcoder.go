@@ -45,17 +45,17 @@ func prepareOutputFolder(outputFolder string) error {
 	return nil
 }
 
-func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []string, videoCodec string, err error) {
+func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []string, videoCodec string, aspectRatio string, err error) {
 	log.Println("Récupération des informations sur les pistes audio et sous-titres...")
 	cmd := exec.Command("ffprobe",
 		"-v", "error",
-		"-show_entries", "stream=index,codec_name,codec_type",
+		"-show_entries", "stream=index,codec_name,codec_type,display_aspect_ratio",
 		"-of", "csv=p=0",
 		inputFile,
 	)
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("failed to execute command: %w", err)
+		return nil, nil, "", "", fmt.Errorf("failed to execute command: %w", err)
 	}
 
 	ffprobeOutput := strings.Split(strings.TrimSpace(string(output)), "\n")
@@ -74,6 +74,7 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 			}
 		case "video":
 			videoCodec = codecName
+			aspectRatio = fields[3]
 		}
 	}
 
@@ -81,78 +82,40 @@ func extractStreamsInfo(inputFile string) (audioStreams, subtitleStreams []strin
 	log.Println("Pistes de sous-titres trouvées :", subtitleStreams)
 	log.Println("Codec vidéo :", videoCodec)
 
-	return audioStreams, subtitleStreams, videoCodec, nil
+	return audioStreams, subtitleStreams, videoCodec, aspectRatio, nil
 }
 
-func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoScale, introFile string) error {
+func transcodeVideo(inputFile, outputFolder, chunkDuration, videoScale, introFile string) error {
 	log.Println("Début du transcodage en HLS...")
 	log.Println("Transcodage de la vidéo...")
 
-	// Create a temporary file to store the list of input files
-	listFile, err := os.CreateTemp("", "ffmpeg_list_*.txt")
-	if err != nil {
-		return fmt.Errorf("failed to create temporary file: %w", err)
-	}
-	defer os.Remove(listFile.Name())
-
-	inputFile = strings.ReplaceAll(inputFile, "'", "'\\''")
-
-	// Write the list of input files to the temporary file
-	_, err = listFile.WriteString("file '" + introFile + "'\n")
-	if err != nil {
-		return err
-	}
-	_, err = listFile.WriteString("file '" + inputFile + "'\n")
-	if err != nil {
-		return err
-	}
-
-	// Close the temporary file
-	err = listFile.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close temporary file: %w", err)
-	}
-
 	// Initialize common ffmpeg command arguments
 	ffmpegArgs := []string{
-		"-f", "concat",
-		"-safe", "0",
-		"-i", listFile.Name(),
-		"-map", "0:v:0", // Sélectionnez seulement la première piste vidéo
-	}
-
-	if videoCodec == "h264" {
-		// If the original video is h264, copy the codec for the main video
-		log.Println("La vidéo est déjà encodée en h264, copie du codec pour la vidéo principale...")
-		ffmpegArgs = append(ffmpegArgs, "-c:v", "copy")
-	} else {
-		// Otherwise, transcode the main video
-		log.Println("La vidéo n'est pas encodée en h264, transcodage de la vidéo principale...")
-		ffmpegArgs = append(ffmpegArgs,
-			"-vf", fmt.Sprintf("scale=%s,format=yuv420p", videoScale), // rescaling to 720p
-			"-c:v", "libx264",
-			"-profile:v", "high", // Using the Main profile
-			"-preset", "veryfast",
-			"-crf", "23",
-			"-pix_fmt", "yuv420p",
-		)
-	}
-	ffmpegArgs = append(ffmpegArgs,
+		"-i", introFile,
+		"-i", inputFile,
+		"-filter_complex", fmt.Sprintf("[0:v:0]scale=%s,format=yuv420p,setsar=sar=1/1[v0]; [1:v:0]scale=%s,format=yuv420p,setsar=sar=1/1[v1]; [v0][v1]concat=n=2:v=1[outv]", videoScale, videoScale),
+		"-map", "[outv]",
+		"-c:v", "libx264",
+		"-profile:v", "high", // Using the Main profile
+		"-preset", "veryfast",
+		"-crf", "25",
+		"-pix_fmt", "yuv420p",
 		"-hls_time", chunkDuration,
 		"-hls_playlist_type", "vod",
 		"-hls_segment_filename", filepath.Join(outputFolder, "segment_%03d.ts"),
 		"-hls_flags", "delete_segments",
 		"-f", "hls", filepath.Join(outputFolder, "index.m3u8"),
-	)
+	}
+
 	cmd := exec.Command("ffmpeg", ffmpegArgs...)
 	//cmd.Stdout = os.Stdout
 	//cmd.Stderr = os.Stderr
 	log.Println("Commande ffmpeg :", cmd.String())
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		cmd = exec.Command("ffmpeg", ffmpegArgs...)
-		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
@@ -288,7 +251,7 @@ func shiftSubtitleTimecodes(subtitleFile string, duration time.Duration) error {
 	return nil
 }
 
-func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunkDuration, videoScale string) (TranscodeResponse, error) {
+func ProcessFileTranscode(inputFilePath, introPath, intro219Path, mediaID, outputFolder, chunkDuration, videoScale, videoScale219 string) (TranscodeResponse, error) {
 	start := time.Now()
 	log.Println("Début du transcodage du fichier :", inputFilePath)
 
@@ -297,15 +260,35 @@ func ProcessFileTranscode(inputFilePath, introPath, mediaID, outputFolder, chunk
 		return TranscodeResponse{}, err
 	}
 
-	audioStreams, subtitleStreams, videoCodec, err := extractStreamsInfo(inputFilePath)
+	audioStreams, subtitleStreams, _, aspectRatio, err := extractStreamsInfo(inputFilePath)
 	if err != nil {
 		return TranscodeResponse{}, err
 	}
 
 	beforeTranscode := time.Now()
-	if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoCodec, videoScale, introPath); err != nil {
-		os.RemoveAll(outputFileFolder)
-		return TranscodeResponse{}, err
+	ratioX, err := strconv.ParseFloat(strings.Split(aspectRatio, ":")[0], 64)
+	if err != nil {
+		log.Println("Erreur lors de la récupération du ratio de la vidéo :", err)
+		ratioX = 16
+	}
+	ratioY, err := strconv.ParseFloat(strings.Split(aspectRatio, ":")[1], 64)
+	if err != nil {
+		log.Println("Erreur lors de la récupération du ratio de la vidéo :", err)
+		ratioY = 9
+	}
+
+	if ratioX/ratioY > 1.8 {
+		log.Println("La vidéo est au format 21:9")
+		if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoScale219, intro219Path); err != nil {
+			os.RemoveAll(outputFileFolder)
+			return TranscodeResponse{}, err
+		}
+	} else {
+		log.Println("La vidéo est au format 16:9")
+		if err := transcodeVideo(inputFilePath, outputFileFolder, chunkDuration, videoScale, introPath); err != nil {
+			os.RemoveAll(outputFileFolder)
+			return TranscodeResponse{}, err
+		}
 	}
 	log.Println("Temps de transcodage de la vidéo :", time.Since(beforeTranscode))
 
