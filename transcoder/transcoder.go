@@ -150,6 +150,7 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoCodec, videoSca
 	log.Println("Commande ffmpeg :", cmd.String())
 	err = cmd.Run()
 	if err != nil {
+		cmd = exec.Command("ffmpeg", ffmpegArgs...)
 		cmd.Stderr = os.Stderr
 		cmd.Stdout = os.Stdout
 		err = cmd.Run()
@@ -183,6 +184,19 @@ func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStr
 
 		if err := cmd.Run(); err != nil {
 			if err != nil {
+				cmd = exec.Command("ffmpeg",
+					"-i", introFile,
+					"-i", inputFile,
+					"-filter_complex", "[0:a:0][1:"+stream+"]concat=n=2:v=0:a=1[outa]",
+					"-map", "[outa]",
+					"-c:a", "aac",
+					"-b:a", "160k",
+					"-ac", "2",
+					"-hls_time", chunkDuration,
+					"-hls_playlist_type", "vod",
+					"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
+					outputFile,
+				)
 				cmd.Stderr = os.Stderr
 				cmd.Stdout = os.Stdout
 				err = cmd.Run()
@@ -215,12 +229,15 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 		//cmd.Stdout = os.Stdout
 		//cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			if err != nil {
-				cmd.Stderr = os.Stderr
-				cmd.Stdout = os.Stdout
-				err = cmd.Run()
-				return fmt.Errorf("failed to execute command: %w", err)
-			}
+			cmd := exec.Command("ffmpeg",
+				"-i", inputFile,
+				"-map", "0:"+stream,
+				outputFile,
+			)
+			cmd.Stderr = os.Stderr
+			cmd.Stdout = os.Stdout
+			err = cmd.Run()
+			return fmt.Errorf("failed to execute command: %w", err)
 		}
 		if err = shiftSubtitleTimecodes(outputFile, introDuration); err != nil {
 			log.Printf("failed to shift subtitle timestamps: %v", err)
