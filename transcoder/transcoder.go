@@ -94,14 +94,19 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoScale, introFil
 
 	// Initialize common ffmpeg command arguments
 	ffmpegArgs := []string{
+		"-fflags", "+genpts",
+		"-r", "23.976",
 		"-i", introFile,
+		"-r", "23.976",
 		"-i", inputFile,
 		"-filter_complex", fmt.Sprintf("[0:v:0]scale=%s,format=yuv420p,setsar=sar=1/1[v0]; [1:v:0]scale=%s,format=yuv420p,setsar=sar=1/1[v1]; [v0][v1]concat=n=2:v=1[outv]", videoScale, videoScale),
 		"-map", "[outv]",
+		"-vsync", "2",
 		"-c:v", "libx264",
-		"-profile:v", "high", // Using the Main profile
-		"-preset", "ultrafast",
+		"-profile:v", "high",
 		"-crf", "25",
+		"-preset", "superfast",
+		"-maxrate", "3M",
 		"-pix_fmt", "yuv420p",
 		"-hls_time", chunkDuration,
 		"-hls_playlist_type", "vod",
