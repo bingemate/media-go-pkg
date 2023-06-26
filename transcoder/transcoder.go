@@ -104,6 +104,7 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoScale, introFil
 		"-vsync", "2",
 		"-c:v", "libx264",
 		"-profile:v", "high",
+		"-level", "4.0",
 		"-crf", "25",
 		"-preset", "superfast",
 		"-maxrate", "3M",
