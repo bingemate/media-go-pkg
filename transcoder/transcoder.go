@@ -1,4 +1,4 @@
-package transcoder
+package main
 
 import (
 	"fmt"
@@ -275,12 +275,18 @@ func ProcessFileTranscode(inputFilePath, introPath, intro219Path, mediaID, outpu
 	}
 
 	beforeTranscode := time.Now()
-	ratioX, err := strconv.ParseFloat(strings.Split(aspectRatio, ":")[0], 64)
+	aspectRatioSplit := strings.Split(aspectRatio, ":")
+	if len(aspectRatioSplit) != 2 {
+		log.Println("Erreur lors de la récupération du ratio de la vidéo :", aspectRatioSplit)
+		log.Println("Le ratio par défaut 16:9 sera utilisé")
+		aspectRatioSplit = []string{"16", "9"}
+	}
+	ratioX, err := strconv.ParseFloat(aspectRatioSplit[0], 64)
 	if err != nil {
 		log.Println("Erreur lors de la récupération du ratio de la vidéo :", err)
 		ratioX = 16
 	}
-	ratioY, err := strconv.ParseFloat(strings.Split(aspectRatio, ":")[1], 64)
+	ratioY, err := strconv.ParseFloat(aspectRatioSplit[1], 64)
 	if err != nil {
 		log.Println("Erreur lors de la récupération du ratio de la vidéo :", err)
 		ratioY = 9
@@ -339,11 +345,11 @@ func ProcessFileTranscode(inputFilePath, introPath, intro219Path, mediaID, outpu
 	return response, nil
 }
 
-/*func main() {
+func main() {
 	const (
-		introFile     = "/home/nospy/Projets/bingemate/media-indexer/assets/intro.mkv"
-		introFile219  = "/home/nospy/Projets/bingemate/media-indexer/assets/intro_21-9.mkv"
-		inputFile     = "/home/nospy/Téléchargements/movies-source/Batman - Le Defi - 1992.mkv"
+		introFile     = "/home/nospy/Bureau/bingemate/media-indexer/assets/intro.mkv"
+		introFile219  = "/home/nospy/Bureau/bingemate/media-indexer/assets/intro_21-9.mkv"
+		inputFile     = "/home/nospy/Téléchargements/Le Corniaud.mkv"
 		inputFileID   = "123456"
 		outputFolder  = "/home/nospy/Téléchargements/media/"
 		chunkDuration = "10"       // durée des segments en secondes
@@ -355,4 +361,4 @@ func ProcessFileTranscode(inputFilePath, introPath, intro219Path, mediaID, outpu
 		log.Fatal(err)
 	}
 	fmt.Println(response)
-}*/
+}
