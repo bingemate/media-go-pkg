@@ -1,4 +1,4 @@
-package main
+package transcoder
 
 import (
 	"fmt"
@@ -345,7 +345,7 @@ func ProcessFileTranscode(inputFilePath, introPath, intro219Path, mediaID, outpu
 	return response, nil
 }
 
-func main() {
+/*func main() {
 	const (
 		introFile     = "/home/nospy/Bureau/bingemate/media-indexer/assets/intro.mkv"
 		introFile219  = "/home/nospy/Bureau/bingemate/media-indexer/assets/intro_21-9.mkv"
@@ -361,4 +361,4 @@ func main() {
 		log.Fatal(err)
 	}
 	fmt.Println(response)
-}
+}*/
