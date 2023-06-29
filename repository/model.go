@@ -190,7 +190,7 @@ type TvShowComment struct {
 type MovieWatchListItem struct {
 	UserID  string          `gorm:"type:uuid;primaryKey"`
 	MovieID int             `gorm:"primaryKey"`
-	Status  WatchListStatus `gorm:"not null"`
+	Status  WatchListStatus `gorm:"not null;type:varchar"`
 }
 
 func (MovieWatchListItem) TableName() string {
@@ -200,7 +200,7 @@ func (MovieWatchListItem) TableName() string {
 type TvShowWatchListItem struct {
 	UserID   string          `gorm:"type:uuid;primaryKey"`
 	TvShowID int             `gorm:"primaryKey"`
-	Status   WatchListStatus `gorm:"not null"`
+	Status   WatchListStatus `gorm:"not null;type:varchar"`
 }
 
 func (TvShowWatchListItem) TableName() string {
