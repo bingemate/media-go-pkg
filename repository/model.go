@@ -190,8 +190,7 @@ type TvShowComment struct {
 type MovieWatchListItem struct {
 	UserID  string          `gorm:"type:uuid;primaryKey"`
 	MovieID int             `gorm:"primaryKey"`
-	Movie   Movie           `gorm:"reference:MovieID;constraint:OnDelete:CASCADE;"`
-	Status  WatchListStatus `gorm:"not null;default:PLAN_TO_WATCH"`
+	Status  WatchListStatus `gorm:"not null"`
 }
 
 func (MovieWatchListItem) TableName() string {
@@ -201,8 +200,7 @@ func (MovieWatchListItem) TableName() string {
 type TvShowWatchListItem struct {
 	UserID   string          `gorm:"type:uuid;primaryKey"`
 	TvShowID int             `gorm:"primaryKey"`
-	TvShow   TvShow          `gorm:"reference:TvShowID;constraint:OnDelete:CASCADE;"`
-	Status   WatchListStatus `gorm:"not null;default:PLAN_TO_WATCH"`
+	Status   WatchListStatus `gorm:"not null"`
 }
 
 func (TvShowWatchListItem) TableName() string {
