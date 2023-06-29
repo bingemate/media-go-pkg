@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -135,48 +136,70 @@ func transcodeVideo(inputFile, outputFolder, chunkDuration, videoScale, introFil
 func extractAudioStreams(inputFile, outputFolder, chunkDuration string, audioStreams []string, introFile string) error {
 	log.Println("Transcodage des pistes audio...")
 
-	for _, stream := range audioStreams {
-		outputFile := filepath.Join(outputFolder, fmt.Sprintf("audio_%s.m3u8", stream))
-		cmd := exec.Command("ffmpeg",
-			"-i", introFile,
-			"-i", inputFile,
-			"-filter_complex", "[0:a:0][1:"+stream+"]concat=n=2:v=0:a=1[outa]",
-			"-map", "[outa]",
-			"-c:a", "aac",
-			"-b:a", "160k",
-			"-ac", "2",
-			"-hls_time", chunkDuration,
-			"-hls_playlist_type", "vod",
-			"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
-			outputFile,
-		)
-		//cmd.Stdout = os.Stdout
-		//cmd.Stderr = os.Stderr
-		log.Println("Commande ffmpeg :", cmd.String())
+	semaphore := make(chan struct{}, 2) // Limit to 2 concurrent ffmpeg processes
+	wg := sync.WaitGroup{}
+	var errS error = nil
+	var errLock sync.Mutex
 
-		if err := cmd.Run(); err != nil {
-			if err != nil {
-				cmd = exec.Command("ffmpeg",
-					"-i", introFile,
-					"-i", inputFile,
-					"-filter_complex", "[0:a:0][1:"+stream+"]concat=n=2:v=0:a=1[outa]",
-					"-map", "[outa]",
-					"-c:a", "aac",
-					"-b:a", "160k",
-					"-ac", "2",
-					"-hls_time", chunkDuration,
-					"-hls_playlist_type", "vod",
-					"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
-					outputFile,
-				)
-				cmd.Stderr = os.Stderr
-				cmd.Stdout = os.Stdout
-				err = cmd.Run()
-				return fmt.Errorf("failed to execute command: %w", err)
+	for _, stream := range audioStreams {
+		wg.Add(1)
+
+		go func(stream string) {
+			defer wg.Done()
+			semaphore <- struct{}{}        // Wait for a free slot
+			defer func() { <-semaphore }() // Free slot
+
+			outputFile := filepath.Join(outputFolder, fmt.Sprintf("audio_%s.m3u8", stream))
+			cmd := exec.Command("ffmpeg",
+				"-i", introFile,
+				"-i", inputFile,
+				"-filter_complex", "[0:a:0][1:"+stream+"]concat=n=2:v=0:a=1[outa]",
+				"-map", "[outa]",
+				"-c:a", "aac",
+				"-b:a", "160k",
+				"-ac", "2",
+				"-hls_time", chunkDuration,
+				"-hls_playlist_type", "vod",
+				"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
+				outputFile,
+			)
+			//cmd.Stdout = os.Stdout
+			//cmd.Stderr = os.Stderr
+			log.Println("Commande ffmpeg :", cmd.String())
+
+			if err := cmd.Run(); err != nil {
+				if err != nil {
+					cmd = exec.Command("ffmpeg",
+						"-i", introFile,
+						"-i", inputFile,
+						"-filter_complex", "[0:a:0][1:"+stream+"]concat=n=2:v=0:a=1[outa]",
+						"-map", "[outa]",
+						"-c:a", "aac",
+						"-b:a", "160k",
+						"-ac", "2",
+						"-hls_time", chunkDuration,
+						"-hls_playlist_type", "vod",
+						"-hls_segment_filename", filepath.Join(outputFolder, fmt.Sprintf("audio_%s_%%03d.ts", stream)),
+						outputFile,
+					)
+					cmd.Stderr = os.Stderr
+					cmd.Stdout = os.Stdout
+					log.Printf("failed to execute command: %v", err)
+					err = cmd.Run()
+					errLock.Lock()
+					defer errLock.Unlock()
+					errS = fmt.Errorf("failed to execute command: %w", err)
+					return
+				}
 			}
+			log.Println("Piste audio extraite :", outputFile)
+		}(stream)
+		if errS != nil {
+			return errS
 		}
-		log.Println("Piste audio extraite :", outputFile)
 	}
+
+	wg.Wait()
 	return nil
 }
 
@@ -191,32 +214,60 @@ func extractSubtitleStreams(inputFile, outputFolder string, subtitleStreams []st
 
 	log.Println("Durée de la vidéo d'introduction :", introDuration)
 
+	semaphore := make(chan struct{}, 4) // Limit to 4 concurrent ffmpeg processes
+	wg := sync.WaitGroup{}
+	var errLock sync.Mutex
+	var errS error = nil
+
 	for _, stream := range subtitleStreams {
-		outputFile := filepath.Join(outputFolder, fmt.Sprintf("subtitle_%s.vtt", stream))
-		cmd := exec.Command("ffmpeg",
-			"-i", inputFile,
-			"-map", "0:"+stream,
-			outputFile,
-		)
-		//cmd.Stdout = os.Stdout
-		//cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
+		wg.Add(1)
+
+		go func(stream string) {
+			defer wg.Done()
+			semaphore <- struct{}{}        // Wait for a free slot
+			defer func() { <-semaphore }() // Free slot
+
+			outputFile := filepath.Join(outputFolder, fmt.Sprintf("subtitle_%s.vtt", stream))
 			cmd := exec.Command("ffmpeg",
 				"-i", inputFile,
 				"-map", "0:"+stream,
 				outputFile,
 			)
-			cmd.Stderr = os.Stderr
-			cmd.Stdout = os.Stdout
-			err = cmd.Run()
-			return fmt.Errorf("failed to execute command: %w", err)
-		}
-		if err = shiftSubtitleTimecodes(outputFile, introDuration); err != nil {
-			log.Printf("failed to shift subtitle timestamps: %v", err)
-		}
+			//cmd.Stdout = os.Stdout
+			//cmd.Stderr = os.Stderr
+			if err := cmd.Run(); err != nil {
+				cmd = exec.Command("ffmpeg",
+					"-i", inputFile,
+					"-map", "0:"+stream,
+					outputFile,
+				)
+				cmd.Stderr = os.Stderr
+				cmd.Stdout = os.Stdout
+				log.Printf("failed to execute command: %v", err)
+				err = cmd.Run()
+				errLock.Lock()
+				defer errLock.Unlock()
+				errS = fmt.Errorf("failed to execute command: %w", err)
+				return
+			}
 
-		log.Println("Piste de sous-titres extraite :", outputFile)
+			if err = shiftSubtitleTimecodes(outputFile, introDuration); err != nil {
+				log.Printf("failed to shift subtitle timestamps: %v", err)
+				errLock.Lock()
+				defer errLock.Unlock()
+				errS = fmt.Errorf("failed to shift subtitle timestamps: %w", err)
+				return
+			}
+
+			log.Println("Piste de sous-titres extraite :", outputFile)
+		}(stream)
+		if errS != nil {
+			return errS
+		}
 	}
+
+	wg.Wait()
+
 	return nil
 }
 
