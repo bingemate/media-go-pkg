@@ -584,6 +584,7 @@ func (m *mediaClient) GetMoviesByActor(actorID int, page int) (*PaginatedMovieRe
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["with_cast"] = strconv.Itoa(actorID)
+	options["include_adult"] = "true"
 	movies, err := m.tmdbClient.DiscoverMovie(options)
 	if err != nil {
 		return nil, err
