@@ -671,6 +671,7 @@ func (m *mediaClient) GetMoviesByStudio(studioID int, page int) (*PaginatedMovie
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["with_companies"] = strconv.Itoa(studioID)
+	options["include_adult"] = "true"
 	movies, err := m.tmdbClient.DiscoverMovie(options)
 	if err != nil {
 		return nil, err
@@ -697,6 +698,7 @@ func (m *mediaClient) GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVS
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["with_networks"] = strconv.Itoa(studioID)
+	options["include_adult"] = "true"
 	tvShows, err := m.tmdbClient.DiscoverTV(options)
 	if err != nil {
 		return nil, err
