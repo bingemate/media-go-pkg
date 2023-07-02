@@ -13,45 +13,47 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type mediaCache interface {
 	AddActor(actor *Actor)
+	AddActorSearchResults(query string, page int, adult bool, results *PaginatedActorResults)
 	AddEpisode(e *TVEpisode)
 	AddMovie(m *Movie)
 	AddMovieGenre(genre *Genre)
-	AddMovieSearchResults(query string, page int, results *PaginatedMovieResults)
+	AddMovieRecommendations(movieID int, results []*Movie)
+	AddMoviesByActor(actorID int, page int, results *PaginatedMovieResults)
+	AddMoviesByGenre(genreID int, page int, results *PaginatedMovieResults)
+	AddMoviesByStudio(studioID int, page int, results *PaginatedMovieResults)
+	AddMovieSearchResults(query string, page int, adult bool, results *PaginatedMovieResults)
 	AddMovieSearchResultsYear(query string, page int, year string, results *PaginatedMovieResults)
 	AddMovieShort(m *Movie)
 	AddSeason(tvID int, seasonNumber int, s []*TVEpisode)
 	AddTV(t *TVShow)
 	AddTVGenre(genre *Genre)
-	AddTVSearchResults(query string, page int, results *PaginatedTVShowResults)
+	AddTVRecommendations(tvID int, results []*TVShow)
+	AddTVsByActor(actorID int, page int, results *PaginatedTVShowResults)
+	AddTVsByGenre(genreID int, page int, results *PaginatedTVShowResults)
+	AddTVsByNetwork(networkID int, page int, results *PaginatedTVShowResults)
+	AddTVSearchResults(query string, page int, adult bool, results *PaginatedTVShowResults)
 	AddTVShort(t *TVShow)
 	GetActor(id int) *Actor
+	GetActorSearchResults(query string, page int, adult bool) *PaginatedActorResults
 	GetEpisode(tvID int, seasonNumber int, episodeNumber int) *TVEpisode
 	GetMovie(id int) *Movie
 	GetMovieGenre(id int) *Genre
-	GetMovieSearchResults(query string, page int) *PaginatedMovieResults
+	GetMovieRecommendations(movieID int) []*Movie
+	GetMoviesByActor(actorID int, page int) *PaginatedMovieResults
+	GetMoviesByGenre(genreID int, page int) *PaginatedMovieResults
+	GetMoviesByStudio(studioID int, page int) *PaginatedMovieResults
+	GetMovieSearchResults(query string, page int, adult bool) *PaginatedMovieResults
 	GetMovieSearchResultsYear(query string, page int, year string) *PaginatedMovieResults
 	GetMovieShort(id int) *Movie
 	GetSeason(tvID int, seasonNumber int) []*TVEpisode
 	GetTV(id int) *TVShow
 	GetTVGenre(id int) *Genre
-	GetTVSearchResults(query string, page int) *PaginatedTVShowResults
-	GetTVShort(id int) *TVShow
-	AddMoviesByGenre(genreID int, page int, results *PaginatedMovieResults)
-	GetMoviesByGenre(genreID int, page int) *PaginatedMovieResults
-	AddTVsByGenre(genreID int, page int, results *PaginatedTVShowResults)
-	GetTVsByGenre(genreID int, page int) *PaginatedTVShowResults
-	AddMoviesByActor(actorID int, page int, results *PaginatedMovieResults)
-	GetMoviesByActor(actorID int, page int) *PaginatedMovieResults
-	AddTVsByActor(actorID int, page int, results *PaginatedTVShowResults)
-	GetTVsByActor(actorID int, page int) *PaginatedTVShowResults
-	AddMoviesByStudio(studioID int, page int, results *PaginatedMovieResults)
-	GetMoviesByStudio(studioID int, page int) *PaginatedMovieResults
-	AddTVsByNetwork(networkID int, page int, results *PaginatedTVShowResults)
-	GetTVsByNetwork(networkID int, page int) *PaginatedTVShowResults
-	AddMovieRecommendations(movieID int, results []*Movie)
-	GetMovieRecommendations(movieID int) []*Movie
-	AddTVRecommendations(tvID int, results []*TVShow)
 	GetTVRecommendations(tvID int) []*TVShow
+	GetTVsByActor(actorID int, page int) *PaginatedTVShowResults
+	GetTVsByGenre(genreID int, page int) *PaginatedTVShowResults
+	GetTVsByNetwork(networkID int, page int) *PaginatedTVShowResults
+	GetTVSearchResults(query string, page int, adult bool) *PaginatedTVShowResults
+	GetTVShort(id int) *TVShow
 }
 
 type inMemoryMediaCache struct {
@@ -137,12 +139,20 @@ func (c *inMemoryMediaCache) GetSeason(tvID int, seasonNumber int) []*TVEpisode 
 	return s.([]*TVEpisode)
 }
 
-func (c *inMemoryMediaCache) AddMovieSearchResults(query string, page int, results *PaginatedMovieResults) {
-	c.cache.SetDefault("movie_search:"+query+":"+strconv.Itoa(page), results)
+func (c *inMemoryMediaCache) AddMovieSearchResults(query string, page int, adult bool, results *PaginatedMovieResults) {
+	key := "movie_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
+	c.cache.SetDefault(key, results)
 }
 
-func (c *inMemoryMediaCache) GetMovieSearchResults(query string, page int) *PaginatedMovieResults {
-	r, ok := c.cache.Get("movie_search:" + query + ":" + strconv.Itoa(page))
+func (c *inMemoryMediaCache) GetMovieSearchResults(query string, page int, adult bool) *PaginatedMovieResults {
+	key := "movie_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
+	r, ok := c.cache.Get(key)
 	if !ok {
 		return nil
 	}
@@ -161,12 +171,20 @@ func (c *inMemoryMediaCache) AddMovieSearchResultsYear(query string, page int, y
 	c.cache.SetDefault("movie_search:"+query+":"+strconv.Itoa(page)+":"+year, results)
 }
 
-func (c *inMemoryMediaCache) AddTVSearchResults(query string, page int, results *PaginatedTVShowResults) {
-	c.cache.SetDefault("tv_search:"+query+":"+strconv.Itoa(page), results)
+func (c *inMemoryMediaCache) AddTVSearchResults(query string, page int, adult bool, results *PaginatedTVShowResults) {
+	key := "tv_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
+	c.cache.SetDefault(key, results)
 }
 
-func (c *inMemoryMediaCache) GetTVSearchResults(query string, page int) *PaginatedTVShowResults {
-	r, ok := c.cache.Get("tv_search:" + query + ":" + strconv.Itoa(page))
+func (c *inMemoryMediaCache) GetTVSearchResults(query string, page int, adult bool) *PaginatedTVShowResults {
+	key := "tv_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
+	r, ok := c.cache.Get(key)
 	if !ok {
 		return nil
 	}
@@ -303,6 +321,26 @@ func (c *inMemoryMediaCache) GetTVRecommendations(tvID int) []*TVShow {
 		return nil
 	}
 	return r.([]*TVShow)
+}
+
+func (c *inMemoryMediaCache) AddActorSearchResults(query string, page int, adult bool, results *PaginatedActorResults) {
+	key := "actor_search_results:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
+	c.cache.SetDefault(key, results)
+}
+
+func (c *inMemoryMediaCache) GetActorSearchResults(query string, page int, adult bool) *PaginatedActorResults {
+	key := "actor_search_results:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
+	r, ok := c.cache.Get(key)
+	if !ok {
+		return nil
+	}
+	return r.(*PaginatedActorResults)
 }
 
 type redisMediaCache struct {
@@ -512,8 +550,11 @@ func (r *redisMediaCache) GetSeason(tvID int, seasonNumber int) []*TVEpisode {
 	return s
 }
 
-func (r *redisMediaCache) AddMovieSearchResults(query string, page int, results *PaginatedMovieResults) {
+func (r *redisMediaCache) AddMovieSearchResults(query string, page int, adult bool, results *PaginatedMovieResults) {
 	key := "movie_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
 	data, err := json.Marshal(results)
 	if err != nil {
 		log.Println("Error while marshalling movie search results", err)
@@ -522,8 +563,11 @@ func (r *redisMediaCache) AddMovieSearchResults(query string, page int, results 
 	r.client.Set(key, data, oneWeekExpiration)
 }
 
-func (r *redisMediaCache) GetMovieSearchResults(query string, page int) *PaginatedMovieResults {
+func (r *redisMediaCache) GetMovieSearchResults(query string, page int, adult bool) *PaginatedMovieResults {
 	key := "movie_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
 	data, err := r.client.Get(key).Bytes()
 	if err != nil {
 		return nil
@@ -562,8 +606,11 @@ func (r *redisMediaCache) AddMovieSearchResultsYear(query string, page int, year
 	r.client.Set(key, data, oneWeekExpiration)
 }
 
-func (r *redisMediaCache) AddTVSearchResults(query string, page int, results *PaginatedTVShowResults) {
+func (r *redisMediaCache) AddTVSearchResults(query string, page int, adult bool, results *PaginatedTVShowResults) {
 	key := "tv_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
 	data, err := json.Marshal(results)
 	if err != nil {
 		log.Println("Error while marshalling tv search results", err)
@@ -572,8 +619,11 @@ func (r *redisMediaCache) AddTVSearchResults(query string, page int, results *Pa
 	r.client.Set(key, data, oneWeekExpiration)
 }
 
-func (r *redisMediaCache) GetTVSearchResults(query string, page int) *PaginatedTVShowResults {
+func (r *redisMediaCache) GetTVSearchResults(query string, page int, adult bool) *PaginatedTVShowResults {
 	key := "tv_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
 	data, err := r.client.Get(key).Bytes()
 	if err != nil {
 		return nil
@@ -860,4 +910,35 @@ func (r *redisMediaCache) GetTVRecommendations(tvID int) []*TVShow {
 		return nil
 	}
 	return results
+}
+
+func (r *redisMediaCache) AddActorSearchResults(query string, page int, adult bool, results *PaginatedActorResults) {
+	key := "actor_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
+	data, err := json.Marshal(results)
+	if err != nil {
+		log.Println("Error while marshalling actor search results", err)
+		return
+	}
+	r.client.Set(key, data, oneWeekExpiration)
+}
+
+func (r *redisMediaCache) GetActorSearchResults(query string, page int, adult bool) *PaginatedActorResults {
+	key := "actor_search:" + query + ":" + strconv.Itoa(page)
+	if adult {
+		key += ":adult"
+	}
+	data, err := r.client.Get(key).Bytes()
+	if err != nil {
+		return nil
+	}
+	var results PaginatedActorResults
+	err = json.Unmarshal(data, &results)
+	if err != nil {
+		log.Println("Error while unmarshalling actor search results", err)
+		return nil
+	}
+	return &results
 }
