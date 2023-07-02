@@ -111,6 +111,12 @@ type PaginatedTVShowResults struct {
 	TotalResult int
 }
 
+type PaginatedActorResults struct {
+	Results     []*Actor
+	TotalPage   int
+	TotalResult int
+}
+
 // MediaClient is an interface for a media client API.
 type MediaClient interface {
 	GetActor(actorID int) (*Actor, error)
@@ -141,9 +147,10 @@ type MediaClient interface {
 	GetTVShowsByNetwork(studioID int, page int) (*PaginatedTVShowResults, error)
 	GetTVShowShort(tvShowID int) (*TVShow, error)
 	GetTVShowsReleases(tvIds []int, startDate, endDate time.Time) ([]*TVEpisode, []*TVShow, error)
-	SearchMovies(query string, page int) (*PaginatedMovieResults, error)
+	SearchMovies(query string, page int, adult bool) (*PaginatedMovieResults, error)
 	SearchMoviesYear(query string, year string, page int) (*PaginatedMovieResults, error)
-	SearchTVShows(query string, page int) (*PaginatedTVShowResults, error)
+	SearchTVShows(query string, page int, adult bool) (*PaginatedTVShowResults, error)
+	SearchActors(query string, page int, adult bool) (*PaginatedActorResults, error)
 }
 
 type mediaClient struct {
@@ -401,8 +408,8 @@ func (m *mediaClient) GetRecentTVShows() ([]*TVShow, error) {
 }
 
 // SearchMovies searches for movies matching the given query and returns a slice of Movie objects.
-func (m *mediaClient) SearchMovies(query string, page int) (*PaginatedMovieResults, error) {
-	cachedResults := m.cache.GetMovieSearchResults(query, page)
+func (m *mediaClient) SearchMovies(query string, page int, adult bool) (*PaginatedMovieResults, error) {
+	cachedResults := m.cache.GetMovieSearchResults(query, page, adult)
 	if cachedResults != nil {
 		return cachedResults, nil
 	}
@@ -410,6 +417,9 @@ func (m *mediaClient) SearchMovies(query string, page int) (*PaginatedMovieResul
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
 	options["region"] = "fr"
+	if adult {
+		options["include_adult"] = "true"
+	}
 	movies, err := m.tmdbClient.SearchMovie(query, options)
 	if err != nil {
 		return nil, err
@@ -423,7 +433,7 @@ func (m *mediaClient) SearchMovies(query string, page int) (*PaginatedMovieResul
 		TotalResult: movies.TotalResults,
 		Results:     extractedMovies,
 	}
-	m.cache.AddMovieSearchResults(query, page, result)
+	m.cache.AddMovieSearchResults(query, page, adult, result)
 	return result, nil
 }
 
@@ -456,14 +466,17 @@ func (m *mediaClient) SearchMoviesYear(query string, year string, page int) (*Pa
 }
 
 // SearchTVShows searches for TV shows matching the given query and returns a slice of TVShow objects.
-func (m *mediaClient) SearchTVShows(query string, page int) (*PaginatedTVShowResults, error) {
-	extractedResults := m.cache.GetTVSearchResults(query, page)
+func (m *mediaClient) SearchTVShows(query string, page int, adult bool) (*PaginatedTVShowResults, error) {
+	extractedResults := m.cache.GetTVSearchResults(query, page, adult)
 	if extractedResults != nil {
 		return extractedResults, nil
 	}
 
 	options := extractOptions(m.options)
 	options["page"] = strconv.Itoa(page)
+	if adult {
+		options["include_adult"] = "true"
+	}
 	tvShows, err := m.tmdbClient.SearchTv(query, options)
 	if err != nil {
 		return nil, err
@@ -477,7 +490,34 @@ func (m *mediaClient) SearchTVShows(query string, page int) (*PaginatedTVShowRes
 		TotalResult: tvShows.TotalResults,
 		Results:     extractedTVShows,
 	}
-	m.cache.AddTVSearchResults(query, page, result)
+	m.cache.AddTVSearchResults(query, page, adult, result)
+	return result, nil
+}
+
+// SearchActors searches for actors matching the given query and returns a slice of Actor objects.
+func (m *mediaClient) SearchActors(query string, page int, adult bool) (*PaginatedActorResults, error) {
+	extractedResults := m.cache.GetActorSearchResults(query, page, adult)
+	if extractedResults != nil {
+		return extractedResults, nil
+	}
+
+	options := extractOptions(m.options)
+	options["page"] = strconv.Itoa(page)
+	if adult {
+		options["include_adult"] = "true"
+	}
+	actors, err := m.tmdbClient.SearchPerson(query, options)
+	if err != nil {
+		return nil, err
+	}
+	var extractedActors = extractActors(actors.Results)
+
+	result := &PaginatedActorResults{
+		TotalPage:   actors.TotalPages,
+		TotalResult: actors.TotalResults,
+		Results:     extractedActors,
+	}
+	m.cache.AddActorSearchResults(query, page, adult, result)
 	return result, nil
 }
 
@@ -1090,6 +1130,38 @@ func extractTVActors(credits *tmdb.TvCredits) *[]Person {
 		}
 	}
 	return &actors
+}
+
+// extractActors extracts actors from credits and returns a list of Person.
+func extractActors(actors []struct {
+	Adult       bool
+	ID          int
+	Name        string
+	Popularity  float32
+	ProfilePath string `json:"profile_path"`
+	KnownFor    []struct {
+		Adult         bool
+		BackdropPath  string `json:"backdrop_path"`
+		ID            int
+		OriginalTitle string `json:"original_title"`
+		ReleaseDate   string `json:"release_date"`
+		PosterPath    string `json:"poster_path"`
+		Popularity    float32
+		Title         string
+		VoteAverage   float32 `json:"vote_average"`
+		VoteCount     uint32  `json:"vote_count"`
+		MediaType     string  `json:"media_type"`
+	} `json:"known_for"`
+}) []*Actor {
+	var cast = make([]*Actor, len(actors))
+	for i, actor := range actors {
+		cast[i] = &Actor{
+			ID:         actor.ID,
+			Name:       actor.Name,
+			ProfileURL: profileImgURL(actor.ProfilePath),
+		}
+	}
+	return cast
 }
 
 // extractMovieCrew extracts crew from movie credits and returns a list of Person.
