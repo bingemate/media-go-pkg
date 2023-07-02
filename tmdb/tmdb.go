@@ -613,7 +613,7 @@ func (m *mediaClient) GetTVShowsByActor(actorID int, page int) (*PaginatedTVShow
 		return nil, err
 	}
 	var wg sync.WaitGroup
-	var startIndex = int(math.Min(float64((page-1)*20), float64(len(actorTVCredits.Cast)-1)))
+	var startIndex = int(math.Min(float64((page-1)*20), math.Max(0, float64(len(actorTVCredits.Cast)-1))))
 	var endIndex = int(math.Min(float64(page*20), float64(len(actorTVCredits.Cast))))
 	var extractedTVShows = make([]*TVShow, endIndex-startIndex)
 	var lockIndexes = make([]sync.Mutex, endIndex-startIndex)
